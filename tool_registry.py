@@ -18,6 +18,15 @@ from tools.system_info_tool import (
 from tools.media_tool import play_youtube_music, global_music_play, global_music_pause, global_music_next, global_music_previous
 from tools.input_tool import keyboard_type, keyboard_shortcut, mouse_move, mouse_click, mouse_scroll
 
+'''
+    Documentación:
+    - Este módulo actúa como un registro centralizado de todas las herramientas disponibles para Jarvis.
+    - Cada herramienta se importa desde su respectivo módulo y se asigna a una clave única en el diccionario TOOLS.
+    - La función get_tool(name) permite recuperar una herramienta específica por su nombre, facilitando su uso en el cerebro de Jarvis o en cualquier otra parte del sistema.   
+
+'''
+
+
 TOOLS = {
 
 
@@ -78,5 +87,4 @@ TOOLS = {
 
 
 def get_tool(name):
-
     return TOOLS.get(name)

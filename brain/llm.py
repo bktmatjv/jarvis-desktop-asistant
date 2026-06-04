@@ -27,14 +27,12 @@ client = Groq(
     api_key=api_keyy
 )
 
+# modelo escogido para las interacciones con el LLM, puedes cambiarlo por otro modelo de Groq si lo deseas, pero "llama-3.1-8b-instant" es una buena opción para empezar por su equilibrio entre velocidad y capacidad de comprensión.
 MODEL = "llama-3.1-8b-instant"
 
 
+# función principal para enviar prompts al LLM y recibir respuestas
 def ask_llm(prompt: str) -> str:
-    """
-    Sends a prompt to Groq and returns the response.
-    """
-
     try:
         chat = client.chat.completions.create(
             messages=[
@@ -49,7 +47,7 @@ def ask_llm(prompt: str) -> str:
         )
 
         return chat.choices[0].message.content
-
+    
     except Exception as e:
         print("LLM ERROR:", e)
         return ""

@@ -2,8 +2,11 @@ import json
 from brain.llm import ask_llm
 
 '''
-    script para la configuracion y promtpeo del llm que se encarga de interpretar las órdenes del usuario y decidir qué herramienta usar y con qué parámetros. La idea es que puedas enviar cualquier tipo de orden al cerebro de Jarvis, como "abre el bloc de notas", o "busca 'Python programming' en Google", o "ponme 'Bohemian Rhapsody' en YouTube", y esta función se encargue de analizar esa orden, entender la intención detrás de ella, y devolver una respuesta estructurada en formato JSON que indique exactamente qué herramienta debe usar Jarvis para cumplir esa orden, junto con los parámetros necesarios para esa herramienta. AUN EN DESARROLLO, NO TODAS LAS FUNCIONES ESTÁN OPTIMIZADAS O TERMINADAS, PERO LA IDEA ES QUE SEA UNA HERRAMIENTA COMPLETA PARA PLANEAR ACCIONES DESDE EL CEREBRO DE JARVIS.
- 
+    Documentacion:
+    - Este módulo es el encargado de la planificación de acciones en Jarvis. Su función principal es tomar el input del usuario, procesarlo a través del modelo de lenguaje (LLM) para interpretar la intención detrás de ese input, y luego devolver una acción concreta que Jarvis pueda ejecutar.
+    - La función plan(user_input) es la interfaz principal de este módulo. Toma un string de input del usuario, lo envía al LLM con un prompt específico que le indica cómo debe interpretar ese input y qué tipo de respuesta debe generar (en este caso, una acción en formato JSON), y luego procesa la respuesta del LLM para extraer la acción que Jarvis debe ejecutar.
+    - El prompt que se le envía al LLM es muy detallado e incluye reglas claras sobre cómo debe interpretar las órdenes del usuario, qué herramientas tiene disponibles para ejecutar acciones, y cómo debe formatear su respuesta. Esto es crucial para asegurarnos de que el LLM entienda exactamente lo que se espera de él y genere respuestas que sean útiles y ejecutables por Jarvis.
+    - AUN EN DESARROLLO, NO TODAS LAS FUNCIONES ESTÁN OPTIMIZADAS O TERMINADAS, PERO LA IDEA ES QUE SEA UNA HERRAMIENTA COMPLETA PARA PLANIFICAR ACCIONES DESDE EL CEREBRO DE JARVIS.
 '''
 
 

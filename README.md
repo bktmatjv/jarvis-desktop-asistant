@@ -53,7 +53,7 @@ El sistema está diseñado de forma modular para facilitar la expansión de habi
 
 1.  **Clonar el repositorio:**
     ```bash
-    git clone [https://github.com/bktmatjv/jarvis_project.git](https://github.com/bktmatjv/jarvis_project.git)
+    git clone https://github.com/bktmatjv/jarvis_project.git
     cd jarvis_project
     ```
 
@@ -89,6 +89,20 @@ Para iniciar Jarvis sin que aparezca la ventana negra de la terminal, utiliza el
 | :--- | :--- | :--- |
 | **v1.0** | ✅ Stable | Primera versión funcional: HUD base, integración con Groq, monitor de sistema y ejecución de scripts en segundo plano. |
 ---
+
+## 🚀 Funcionalidades
+
+| Categoría | Métodos |
+|------------|----------|
+| **System Control** | Abrir programas, apagar, reiniciar, suspender, bloquear el sistema y controlar el volumen. |
+| **Window Control** | Listar ventanas, enfocar, minimizar, maximizar y cerrar ventanas. |
+| **Filesystem** | Crear carpetas y archivos, leer, escribir, eliminar archivos y listar directorios. |
+| **Browser** | Abrir URLs, crear nuevas pestañas y realizar búsquedas en Google. |
+| **Keyboard** | Escribir texto y ejecutar atajos de teclado. |
+| **Mouse** | Mover el cursor, realizar clics y desplazamiento (scroll). |
+| **Media & YouTube** | Reproducir canciones específicas en YouTube y controlar la reproducción global (play, pause y siguiente). |
+| **System Information** | Consultar hora, batería, uso de CPU, uso de memoria, procesos en ejecución y capturar screenshots. |
+| **Command Execution** | Ejecutar comandos de terminal. |
 
 ## 👨‍💻 Autor
 
