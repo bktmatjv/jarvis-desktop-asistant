@@ -1,127 +1,47 @@
 {
-  "hola jarvis": {
-    "tool": "keyboard.type",
-    "params": {
-      "text": "Hola, \u00bfen qu\u00e9 puedo ayudarte?"
-    }
-  },
-  "pon por si ma\u00f1ana no estoy de omar courtz": {
+  "pon una cancion conocida de feid": {
+    "llm_response": "Reproduciendo una canci\u00f3n de Feid",
     "tool": "youtube.play_song",
     "params": {
-      "song": "por si ma\u00f1ana no estoy de omar courtz"
+      "song": "Feid"
     }
   },
-  "set volume 10": {
-    "tool": "system.volume",
-    "params": {
-      "action": "set",
-      "value": 10
-    }
-  },
-  "set volume 33": {
-    "tool": "system.volume",
-    "params": {
-      "action": "set",
-      "value": 33
-    }
-  },
-  "listame las ventanas abiertas": {
-    "tool": "window.list",
-    "params": {}
-  },
-  "maximiza brave": {
-    "tool": "window.maximize",
-    "params": {
-      "title": ".*Brave.*"
-    }
-  },
-  "pausa la cancion": {
+  "pausala": {
+    "llm_response": "Music paused.",
     "tool": "music.pause",
     "params": {}
   },
-  "stop": {
-    "tool": "music.pause",
+  "reanuda": {
+    "llm_response": "Resuming playback.",
+    "tool": "music.play",
     "params": {}
   },
-  "maximiza firefox": {
-    "tool": "window.maximize",
-    "params": {
-      "title": ".*Firefox.*"
-    }
+  "pon la siguiente": {
+    "llm_response": "Playing the next song",
+    "tool": "music.next",
+    "params": {}
   },
-  "abre firefox": {
-    "tool": "system.open_program",
-    "params": {
-      "program": "firefox"
-    }
+  "next": {
+    "llm_response": "Playing next track",
+    "tool": "music.next",
+    "params": {}
   },
-  "abre brave": {
-    "tool": "system.open_program",
-    "params": {
-      "program": "brave"
-    }
+  "la anterior": {
+    "llm_response": "Playing the previous track.",
+    "tool": "music.previous",
+    "params": {}
   },
-  "enfoca firefox": {
-    "tool": "window.focus",
-    "params": {
-      "title": ".*Firefox.*"
-    }
+  "la siguiente": {
+    "llm_response": "Continuando con la reproducci\u00f3n",
+    "tool": "music.next",
+    "params": {}
   },
-  "desenfoca firefox": {
-    "tool": "window.focus",
-    "params": {
-      "title": ".*Firefox.*"
-    }
-  },
-  "cierra firefox": {
-    "tool": "window.close",
-    "params": {
-      "title": ".*Firefox.*"
-    }
-  },
-  "cierra brave": {
-    "tool": "window.close",
-    "params": {
-      "title": ".*Brave.*"
-    }
-  },
-  "set off": {
+  "set volume 50": {
+    "llm_response": "Volume set to 50",
     "tool": "system.volume",
     "params": {
-      "action": "down"
+      "action": "set",
+      "value": 50
     }
-  },
-  "reinicia el sistema": {
-    "tool": "system.restart",
-    "params": {}
-  },
-  "hola": {
-    "tool": "system.volume",
-    "params": {
-      "action": "mute"
-    }
-  },
-  "que tal": {
-    "tool": "system.time",
-    "params": {}
-  },
-  "que horas son ?": {
-    "tool": "system.time",
-    "params": {}
-  },
-  "que tal??": {
-    "llm_response": "I'm functioning within normal parameters.",
-    "tool": "system.time",
-    "params": {}
-  },
-  "que hora es ?": {
-    "llm_response": "La hora actual es",
-    "tool": "system.time",
-    "params": {}
-  },
-  "cuales son tus funcionalidades?": {
-    "llm_response": "I can perform various actions, such as controlling the system, windows, and browser, as well as executing commands and providing system information.",
-    "tool": "system.battery",
-    "params": {}
   }
 }
