@@ -1,1 +1,127 @@
-{}
+{
+  "hola jarvis": {
+    "tool": "keyboard.type",
+    "params": {
+      "text": "Hola, \u00bfen qu\u00e9 puedo ayudarte?"
+    }
+  },
+  "pon por si ma\u00f1ana no estoy de omar courtz": {
+    "tool": "youtube.play_song",
+    "params": {
+      "song": "por si ma\u00f1ana no estoy de omar courtz"
+    }
+  },
+  "set volume 10": {
+    "tool": "system.volume",
+    "params": {
+      "action": "set",
+      "value": 10
+    }
+  },
+  "set volume 33": {
+    "tool": "system.volume",
+    "params": {
+      "action": "set",
+      "value": 33
+    }
+  },
+  "listame las ventanas abiertas": {
+    "tool": "window.list",
+    "params": {}
+  },
+  "maximiza brave": {
+    "tool": "window.maximize",
+    "params": {
+      "title": ".*Brave.*"
+    }
+  },
+  "pausa la cancion": {
+    "tool": "music.pause",
+    "params": {}
+  },
+  "stop": {
+    "tool": "music.pause",
+    "params": {}
+  },
+  "maximiza firefox": {
+    "tool": "window.maximize",
+    "params": {
+      "title": ".*Firefox.*"
+    }
+  },
+  "abre firefox": {
+    "tool": "system.open_program",
+    "params": {
+      "program": "firefox"
+    }
+  },
+  "abre brave": {
+    "tool": "system.open_program",
+    "params": {
+      "program": "brave"
+    }
+  },
+  "enfoca firefox": {
+    "tool": "window.focus",
+    "params": {
+      "title": ".*Firefox.*"
+    }
+  },
+  "desenfoca firefox": {
+    "tool": "window.focus",
+    "params": {
+      "title": ".*Firefox.*"
+    }
+  },
+  "cierra firefox": {
+    "tool": "window.close",
+    "params": {
+      "title": ".*Firefox.*"
+    }
+  },
+  "cierra brave": {
+    "tool": "window.close",
+    "params": {
+      "title": ".*Brave.*"
+    }
+  },
+  "set off": {
+    "tool": "system.volume",
+    "params": {
+      "action": "down"
+    }
+  },
+  "reinicia el sistema": {
+    "tool": "system.restart",
+    "params": {}
+  },
+  "hola": {
+    "tool": "system.volume",
+    "params": {
+      "action": "mute"
+    }
+  },
+  "que tal": {
+    "tool": "system.time",
+    "params": {}
+  },
+  "que horas son ?": {
+    "tool": "system.time",
+    "params": {}
+  },
+  "que tal??": {
+    "llm_response": "I'm functioning within normal parameters.",
+    "tool": "system.time",
+    "params": {}
+  },
+  "que hora es ?": {
+    "llm_response": "La hora actual es",
+    "tool": "system.time",
+    "params": {}
+  },
+  "cuales son tus funcionalidades?": {
+    "llm_response": "I can perform various actions, such as controlling the system, windows, and browser, as well as executing commands and providing system information.",
+    "tool": "system.battery",
+    "params": {}
+  }
+}

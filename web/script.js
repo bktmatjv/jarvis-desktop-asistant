@@ -2,7 +2,9 @@ const input = document.getElementById('commandInput');
 const statusText = document.getElementById('status');
 const ring1 = document.getElementById('ring1');
 const wrapper = document.getElementById('mainWrapper');
-        
+const jarvisResponse = document.getElementById('jarvisResponse');        
+
+
 // --- 1. LÓGICA DEL VISUALIZADOR DE AUDIO ---
 const vizContainer = document.getElementById('audioViz');
 const numBars = 32;
@@ -34,22 +36,35 @@ function updateStatus(text) {
 }
 
 input.addEventListener('keydown', async function(e) {
+
+
     if (e.key === 'Enter') {
         const text = input.value.trim();
         
         if (text !== "") {
             if (window.pywebview) {
+                // 1. Estado de "Pensando"
                 statusText.innerText = "[ PROCESSING_COMMAND... ]";
                 statusText.style.color = "#fff";
                 ring1.style.animationDuration = "0.5s"; 
                 isProcessing = true; 
                 
+                // Actualizamos la nueva pantalla
+                jarvisResponse.innerText = "PROCESANDO CONSULTA...";
+                jarvisResponse.classList.add("processing");
+                
                 input.value = ''; 
                 
+                // 2. Enviamos el comando a Python
                 const result = await pywebview.api.send_command(text);
                 
-                statusText.innerText = `[ SYS_${result.toUpperCase()} ]`;
-                statusText.style.color = result === "Done" ? "#00ff00" : "#ff3333"; 
+                // 3. Mostramos la respuesta del JSON/LLM en la pantalla
+                jarvisResponse.innerText = result;
+                jarvisResponse.classList.remove("processing");
+                
+                // Restauramos el estado
+                statusText.innerText = `[ SYS_READY ]`;
+                statusText.style.color = "#00ff00"; 
                 ring1.style.animationDuration = "10s"; 
                 isProcessing = false; 
             }

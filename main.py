@@ -1,6 +1,7 @@
 import os
 import webview
-import keyboard
+# import keyboard 
+from pynput import keyboard
 import psutil
 import threading
 from datetime import datetime
@@ -9,9 +10,7 @@ from datetime import datetime
 # Esto asegura que Python siempre sepa que su carpeta de trabajo es donde está el script
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
-# ==========================================
-# IMPORTACIONES DE TU CÓDIGO ORIGINAL
-# ==========================================
+
 from brain.planner import plan
 from executor.executor import execute
 from memory.memory import get_command, remember_command
@@ -23,12 +22,10 @@ is_visible = True
 
 def ui_print(msg):
     """Imprime en la consola de Windows y lo envía al HUD en tiempo real"""
-    print(msg) # Lo sigues viendo en tu consola negra normal
+    print(msg) # Lo sigues viendo en la consola negra normal
     
     if window:
-        # Limpiamos las comillas para no romper el JavaScript
         safe_msg = str(msg).replace("'", "\\'").replace('"', '\\"')
-        # Inyectamos la orden al JavaScript en vivo
         window.evaluate_js(f"addLog('{safe_msg}')")
 
 
@@ -38,7 +35,6 @@ class JarvisAPI:
 
         psutil.cpu_percent(interval=None) 
 
-    # 👇 AGREGA ESTA NUEVA FUNCIÓN A TU CLASE 👇
     def get_system_data(self):
         """Retorna los signos vitales de la PC y el saludo dinámico"""
         
@@ -51,8 +47,7 @@ class JarvisAPI:
         else:
             saludo = "BUENAS NOCHES"
 
-        # 👇 EL ARREGLO ESTÁ AQUÍ 👇
-        # Al poner 0.1, obligamos a Python a medir el uso real durante 100 milisegundos
+
         cpu_usage = psutil.cpu_percent(interval=0.1)
         
         ram = psutil.virtual_memory()
@@ -98,7 +93,11 @@ class JarvisAPI:
 
             # 3️⃣ Éxito
             ui_print("✅ TAREA COMPLETADA")
-            return "Done"
+
+            respuesta_verbal = action.get("llm_response") or action.get("message") or action.get("reply") or "A sus órdenes."
+
+            return respuesta_verbal
+
 
         except Exception as e:
             # 4️⃣ En caso de error, también lo mandamos a la pantallita
@@ -137,8 +136,14 @@ def toggle_window():
 if __name__ == '__main__':
     api = JarvisAPI()
 
-    # Mantenemos tu hotkey original: ctrl+space
-    keyboard.add_hotkey("ctrl+space", toggle_window)
+    # 👇 NUEVA SINTAXIS DE PYNPUT 👇
+    # Creamos el atajo global
+    hotkey_listener = keyboard.GlobalHotKeys({
+        '<ctrl>+<space>': toggle_window
+    })
+    # Iniciamos el escuchador en un hilo de fondo
+    hotkey_listener.start()
+    # 👆 FIN DE LA NUEVA SINTAXIS 👆
 
     # Reemplaza la creación de tu ventana con estas dimensiones
     window = webview.create_window(
@@ -152,5 +157,7 @@ if __name__ == '__main__':
         on_top=True           
     )
     
-    print("🚀 JARVIS listo. Presiona 'Ctrl + Espacio' para invocarlo.")
+    print("GOD -> JARVIS listo. Presiona 'Ctrl + Espacio' para invocarlo.")
+    # webview.start() bloquea el hilo principal, manteniendo vivo el programa
+    # y permitiendo que el hotkey_listener funcione en segundo plano.
     webview.start()

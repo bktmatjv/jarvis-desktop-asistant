@@ -1,0 +1,13 @@
+pywebview 
+psutil 
+keyboard 
+python-dotenv 
+groq
+pyautogui
+comtypes
+pywinauto
+pycaw
+pyinput
+qtpy 
+PyQt6 
+PyQt6-WebEngine

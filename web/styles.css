@@ -91,3 +91,35 @@ input::placeholder { color: rgba(0, 229, 255, 0.3); text-shadow: none; }
 /* Visualizador de audio */
 .visualizer-container { display: flex; justify-content: center; align-items: flex-end; height: 40px; margin-top: 20px; gap: 4px; }
 .viz-bar { width: 6px; background: var(--jarvis-cyan); box-shadow: var(--jarvis-glow); border-radius: 2px 2px 0 0; transition: height 0.08s ease; opacity: 0.8; }
+
+/* 👇 NUEVOS ESTILOS PARA LA RESPUESTA DE JARVIS 👇 */
+.jarvis-response {
+    min-height: 60px;
+    margin: 0 0 20px 0;
+    padding: 15px;
+    background: rgba(0, 229, 255, 0.05);
+    border: 1px solid rgba(0, 229, 255, 0.2);
+    border-radius: 4px;
+    color: #ffffff;
+    font-size: 16px;
+    line-height: 1.5;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-shadow: 0 0 5px rgba(255, 255, 255, 0.5);
+    transition: all 0.3s ease;
+}
+
+.jarvis-response.processing {
+    border-color: var(--jarvis-cyan);
+    box-shadow: 0 0 15px rgba(0, 229, 255, 0.3) inset;
+    color: var(--jarvis-cyan);
+    animation: pulseText 1.5s infinite;
+}
+
+@keyframes pulseText {
+    0% { opacity: 0.6; }
+    50% { opacity: 1; }
+    100% { opacity: 0.6; }
+}

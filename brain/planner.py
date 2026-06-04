@@ -225,6 +225,7 @@ OUTPUT FORMAT (STRICT)
 Return ONLY:
 
 {
+ "llm_response": "obligatory verbal response to user",
  "tool": "tool.name",
  "params": { }
 }
@@ -242,11 +243,11 @@ No additional text allowed.
 def plan(user_input):
 
     prompt = f"""
-{SYSTEM_PROMPT}
+    {SYSTEM_PROMPT}
 
-User request:
-{user_input}
-"""
+    User request:
+    {user_input}
+    """
 
     response = ask_llm(prompt)
 
