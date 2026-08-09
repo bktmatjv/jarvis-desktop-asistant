@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+websockets
+groq
+motor
+pydantic
+pydantic-settings
+python-dotenv
+apscheduler

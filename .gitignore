@@ -1,34 +1,48 @@
-# --- SEGURIDAD (Lo más importante) ---
-# Ignorar el archivo de claves y variables de entorno
-.env
-
-# --- ENTORNOS VIRTUALES ---
-# Ignorar la carpeta del entorno virtual que veo en tu estructura
+# Entornos virtuales
 venv/
-.venv/
 env/
+.env
+.venv
 
-# --- ARCHIVOS DE PYTHON ---
-# Ignorar archivos compilados de Python que saturan el repo
+# Python
 __pycache__/
 *.py[cod]
 *$py.class
-.pytest_cache/
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
 
-# --- CONFIGURACIÓN DE EDITOR (VS Code) ---
-# Ignorar la carpeta .vscode que sale en tu captura
-.vscode/
-
-# --- ARCHIVOS TEMPORALES Y CACHÉ ---
-# Ignorar la carpeta .cache que tienes en tu proyecto
-.cache/
+# Archivos de SO
 .DS_Store
 Thumbs.db
 
-# --- COMPILACIONES (Si llegas a crear un .exe) ---
-build/
-dist/
-*.spec
+# Logs y bases de datos locales
+*.log
+*.sqlite
+*.sqlite3
 
-.cache
-.gitignore
+# IDEs
+.vscode/
+.idea/
+
+# Node (por si en el futuro se usa NPM para el cliente web)
+node_modules/
+package-lock.json
+
+# Caches de Groq / APIs
+.cache/

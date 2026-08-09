@@ -136,3 +136,109 @@ function addLog(message) {
     consoleBox.appendChild(newLog);
     consoleBox.scrollTop = consoleBox.scrollHeight;
 }
+
+// --- 6. SEGURIDAD (DUMB CLIENT) ---
+function showSecurityAlert(commandStr) {
+    const modal = document.getElementById('securityModal');
+    const cmdEl = document.getElementById('securityCommand');
+    
+    cmdEl.innerText = commandStr;
+    modal.style.display = 'flex';
+    
+    // Pause auto-hide or focus issues if any
+    input.blur();
+}
+
+function confirmSecurity(isAllowed) {
+    const modal = document.getElementById('securityModal');
+    modal.style.display = 'none';
+    
+    input.focus();
+    
+    if (window.pywebview) {
+        window.pywebview.api.security_response(isAllowed);
+    }
+}
+
+function updateJarvisResponse(text) {
+    const jarvisResponse = document.getElementById('jarvisResponse');
+    const actionDisplay = document.getElementById('actionDisplay');
+    const actionHeader = document.getElementById('actionHeader');
+    const actionText = document.getElementById('actionText');
+    const outputDisplay = document.getElementById('outputDisplay');
+    const statusText = document.getElementById('status');
+    const ring1 = document.getElementById('ring1');
+    const ring2 = document.querySelector('.reactor-ring-2');
+    
+    // Devolvemos la caja derecha a estado inactivo (Standby)
+    actionDisplay.classList.remove('active');
+    actionHeader.innerText = '[ STANDBY ]';
+    actionText.innerText = '>_ WAITING FOR PROCESS...';
+    outputDisplay.style.opacity = '0.2';
+    
+    jarvisResponse.innerText = text;
+    jarvisResponse.classList.remove("processing");
+    
+    // Restauramos el estado
+    statusText.innerText = `[ SYS_READY ]`;
+    statusText.style.color = "#00ff00"; 
+    ring1.style.animationDuration = "10s"; 
+    ring2.style.borderColor = "#fff";
+    isProcessing = false; 
+}
+
+let typeWriterTimeout = null;
+
+function showSystemAction(commandText) {
+    const actionDisplay = document.getElementById('actionDisplay');
+    const actionHeader = document.getElementById('actionHeader');
+    const actionText = document.getElementById('actionText');
+    const outputDisplay = document.getElementById('outputDisplay');
+    const statusText = document.getElementById('status');
+    const ring1 = document.getElementById('ring1');
+    const ring2 = document.querySelector('.reactor-ring-2');
+    
+    // Activamos agresivamente la columna derecha
+    actionDisplay.classList.add('active');
+    actionHeader.innerText = '[ SYSTEM.OVERRIDE ]';
+    outputDisplay.style.opacity = '0.2'; // Opacamos el output viejo si lo hubiera
+    
+    // UI super agresiva
+    statusText.innerText = `[ EXECUTING_SUBROUTINE ]`;
+    statusText.style.color = "#ff003c";
+    ring1.style.animationDuration = "0.2s"; 
+    ring2.style.borderColor = "#ff003c";
+    
+    // Efecto Typewriter
+    actionText.innerText = ">_ ";
+    let i = 0;
+    const fullText = ">_ " + commandText;
+    
+    if (typeWriterTimeout) clearTimeout(typeWriterTimeout);
+    
+    function type() {
+        if (i < fullText.length) {
+            actionText.innerText = fullText.substring(0, i+1);
+            i++;
+            typeWriterTimeout = setTimeout(type, 15);
+        }
+    }
+    type();
+}
+
+function showCommandOutput(outputText) {
+    const outputDisplay = document.getElementById('outputDisplay');
+    const outputTextEl = document.getElementById('outputText');
+    const statusText = document.getElementById('status');
+    const ring1 = document.getElementById('ring1');
+    const ring2 = document.querySelector('.reactor-ring-2');
+    
+    outputDisplay.style.opacity = '1';
+    outputTextEl.innerText = outputText;
+    
+    // Cambiar estado a verde/procesado
+    statusText.innerText = `[ COMMAND_EXECUTED ]`;
+    statusText.style.color = "#00ff00";
+    ring1.style.animationDuration = "5s"; 
+    ring2.style.borderColor = "#00ff00";
+}
