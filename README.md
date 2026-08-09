@@ -1,109 +1,105 @@
-# 🤖 JARVIS - Personal Desktop Asistant
+# JARVIS: Asistente de Escritorio Autónomo
 
-![Python](https://img.shields.io/badge/python-3.12%2B-cyan.svg)
-![Framework](https://img.shields.io/badge/framework-PyWebView-orange.svg)
-![Status](https://img.shields.io/badge/status-v1.0--stable-green.svg)
-
-**J.A.R.V.I.S.** es un asistente personal modular inspirado en la estética de Iron Man. Combina una interfaz holográfica inmersiva con un potente motor de automatización capaz de controlar el sistema, gestionar archivos y ejecutar scripts personalizados.
+JARVIS es un sistema de Asistencia e Inteligencia Artificial de grado AGI, diseñado con una arquitectura robusta de **Cliente-Servidor (Backend)** y capacidades autónomas. Puede controlar tu entorno de escritorio, agendar tareas por su cuenta e interactuar visual y auditivamente.
 
 ---
 
-## ✨ Características Principales
+## Features Principales
 
-- **Simulación HUD Holográfico:** Interfaz futurista con efectos de desenfoque y transparencias (Glassmorphism).
-- **Monitor de Hardware:** Lectura en tiempo real de CPU y RAM. (librerias python)
-- **Ejecutor de Herramientas:** Acceso a herramientas de sistema, navegador, multimedia y automatización de OS.
-- **Visualizador de Audio:** Ecualizador digital que reacciona a los procesos de la IA.
-- **Live Logs:** Registro en tiempo real de cada acción ejecutada por el asistente.
-- **Inicio Fantasma:** Ejecución en segundo plano sin ventanas de consola visibles.
+### Autonomía Proactiva y Calendarización Asíncrona
+El núcleo del asistente incorpora un motor de tareas en segundo plano basado en `APScheduler`. Esto le otorga al LLM la capacidad de invocar llamadas a herramientas (Tool Calls) del lado del servidor para programar eventos en el futuro. Cuando el temporizador expira, el backend inicia una comunicación WebSocket (Push Event) hacia el cliente para notificar al usuario de forma autónoma, simulando proactividad sin requerir un prompt inicial del usuario.
 
----
+### Ejecución de Comandos a Nivel de Sistema (Bash REPL)
+El cliente local actúa como un puente de hardware y software, permitiendo la interacción directa con el sistema operativo (Linux). Mediante un subproceso de Bash administrado por `asyncio.create_subprocess_exec`, el agente puede:
+- Modificar el sistema de archivos.
+- Interactuar con gestores de paquetes y configuraciones.
+- Iniciar y controlar aplicaciones de interfaz gráfica.
+- Monitorear en tiempo real métricas vitales (uso de CPU y memoria RAM).
 
-## 📸 Visual Showcase
+### Arquitectura de Redundancia y Manejo de Rate Limits
+Para garantizar la operación continua sin interrupciones por límites de cuota (HTTP 429), la capa de integración LLM implementa un patrón de rotación. El sistema acepta múltiples API Keys de Groq. Ante una respuesta de limitación, el servicio cambia automáticamente al siguiente cliente disponible en el arreglo de llaves, mitigando los tiempos de inactividad.
 
-Echa un vistazo al HUD holográfico en acción:
+### Persistencia de Memoria y Contexto a Largo Plazo
+Todas las sesiones de WebSocket, incluyendo metadatos de Tool Calls y comandos ejecutados, se guardan en un clúster de MongoDB utilizando el driver asíncrono `Motor`. El mecanismo de retención emplea una técnica de "Sliding Window" que inyecta los últimos N mensajes en el prompt base, proporcionando memoria contextual sin exceder la ventana de tokens del LLM.
 
-<p align="center">
-  <img src="img/cap1.png" width="40%" alt="Vista General del HUD">
-  <img src="img/cap2.png" width="40%" alt="HUD Procesando Comando">
-  <img src="img/cap3.png" width="40%" alt="Módulo de Configuración o Herramientas">
-</p>
-
-<p align="center">
-  <i>Vista del panel holográfico con monitoreo de hardware y consola de logs activa.</i>
-</p>
+### Interceptor de Seguridad de Ejecución
+Como salvaguarda ante operaciones destructivas generadas por el LLM, el cliente evalúa todos los comandos de Bash contra una lista heurística de operaciones de alto riesgo (ej. `rm -rf`, `chmod`, `mkfs`). Si se detecta una coincidencia, el hilo de ejecución se pausa mediante `asyncio.Event` y renderiza un modal en el HUD solicitando autorización explícita del operador humano.
 
 ---
 
-## 📂 Estructura del Proyecto
+## Interfaz de Usuario (HUD)
 
-El sistema está diseñado de forma modular para facilitar la expansión de habilidades:
+El cliente de escritorio cuenta con un Head-Up Display (HUD) estilo holográfico que te muestra en tiempo real las acciones que JARVIS ejecuta en tu máquina, inspirado en el diseño premium y de alta tecnología.
 
-* `brain/`: Lógica del Planner y conexión con el LLM (Groq).
-* `executor/`: Motor de procesamiento de acciones.
-* `tools/`: Librería de habilidades (Navegador, Sistema, Multimedia, etc.).
-* `web/`: Frontend del HUD (HTML5/CSS3/JS).
-* `jarvis_scripts/`: Gestor de scripts personalizados.
-* `utils/`: Indexador de programas y herramientas de soporte.
-* `main.py`: Punto de entrada principal del asistente.
+![HUD Captura 1](client/img/cap1.png)
+*El cliente listo para recibir órdenes, monitoreando el estado vital de la PC (RAM/CPU).*
 
----
+![HUD Captura 2](client/img/cap2.png)
+*Visualización de respuestas, notificaciones proactivas y decisiones del sistema.*
 
-## 🚀 Instalación y Configuración
-
-1.  **Clonar el repositorio:**
-    ```bash
-    git clone https://github.com/bktmatjv/jarvis_project.git
-    cd jarvis_project
-    ```
-
-2.  **Preparar el entorno:**
-    ```bash
-    python -m venv venv
-    .\venv\Scripts\activate
-    pip install pywebview psutil keyboard python-dotenv groq
-    ```
-
-3.  **Configurar credenciales:**
-    Crea un archivo `.env` en la raíz y añade tus llaves:
-    ```text
-    GROQ_API_KEY=tu_clave_aqui
-    ```
+![HUD Captura 3](client/img/cap3.png)
+*Output visual de las acciones y confirmaciones de seguridad.*
 
 ---
 
-## ⚙️ Ejecución Silenciosa (Modo Fantasma)
+## Arquitectura del Sistema
 
-Para iniciar Jarvis sin que aparezca la ventana negra de la terminal, utiliza el script incluido:
+El sistema está dividido estrictamente en dos partes para garantizar máxima seguridad y escalabilidad:
 
-1.  Ejecuta `run_main.vbs`.
-2.  El asistente se cargará en segundo plano.
-3.  Usa el atajo global **`Ctrl + Espacio`** para invocar u ocultar el HUD.
+![Arquitectura del Sistema](client/img/arquitectura.png)
 
-*Para que inicie con Windows, copia un acceso directo de `run_main.vbs` en la carpeta `shell:startup`.*
+1. **Backend**: Un servidor FastAPI que maneja la memoria, el LLM (Groq), el enrutamiento de peticiones, la rotación de API Keys y un motor interno de tareas asíncronas (`APScheduler`). Nunca ejecuta comandos en el servidor.
+2. **Client**: Una aplicación de Python (PyWebView + HTML/JS/CSS) que reside en la estación de trabajo local. Recibe comandos por WebSocket del Backend, los ejecuta en el sistema operativo local y envía los resultados de vuelta al servidor.
+
+Para mayor profundidad sobre el diseño interno, referirse al documento: [DOCUMENTATION.md](DOCUMENTATION.md)
 
 ---
-## 📌 Historial de Versiones
 
-| Versión | Estado | Descripción |
+## Tecnologías Utilizadas
+
+*   **Backend**: Python, FastAPI, Uvicorn, Motor (Async MongoDB), APScheduler, Pydantic, Groq API (Llama-3.3-70b-versatile).
+*   **Client**: Python, PyWebView, Asyncio, WebSockets, Pynput (Hotkeys).
+*   **Frontend (HUD)**: Vanilla JS, CSS3 Avanzado (Glassmorphism, animaciones), HTML5.
+
+---
+
+## Instalación y Despliegue
+
+### 1. Variables de Entorno
+Copia el archivo de ejemplo y complétalo:
+```bash
+cp .env.example .env
+```
+Añade tus API Keys de Groq (puedes poner varias separadas por coma) y tu URI de conexión a MongoDB.
+
+### 2. Iniciar el Backend
+Desde la carpeta raíz del proyecto, en un terminal (con el entorno virtual activado):
+```bash
+cd backend
+pip install -r requirements.txt
+uvicorn app.main:app --reload
+```
+
+### 3. Iniciar el Cliente HUD
+En otra terminal diferente:
+```bash
+cd client
+pip install -r requirements.txt
+python main.py
+```
+
+Presiona `Ctrl + Espacio` en cualquier momento en tu escritorio para invocar el HUD holográfico de JARVIS.
+
+---
+
+## Historial de Versiones
+
+| Versión | Fecha | Descripción |
 | :--- | :--- | :--- |
-| **v1.0** | ✅ Stable | Primera versión funcional: HUD base, integración con Groq, monitor de sistema y ejecución de scripts en segundo plano. |
+| **v2.0.0** | Agosto 2026 | Refactorización masiva a arquitectura Cliente-Servidor (FastAPI + PyWebview). Incorporación de Autonomía proactiva (APScheduler), rotación de API Keys, MongoDB para memoria a largo plazo y WebSockets persistentes. |
+| **v1.5.0** | Julio 2026 | Mejoras en el HUD Holográfico con Vanilla CSS. Añadidos atajos de teclado (`Ctrl + Espacio`) globales y reportes del estado vital de CPU/RAM. |
+| **v1.0.0** | Junio 2026 | Versión inicial. Script monolítico básico capaz de ejecutar comandos Bash localmente mediante Groq. |
+
 ---
 
-## 🚀 Funcionalidades
-
-| Categoría | Métodos |
-|------------|----------|
-| **System Control** | Abrir programas, apagar, reiniciar, suspender, bloquear el sistema y controlar el volumen. |
-| **Window Control** | Listar ventanas, enfocar, minimizar, maximizar y cerrar ventanas. |
-| **Filesystem** | Crear carpetas y archivos, leer, escribir, eliminar archivos y listar directorios. |
-| **Browser** | Abrir URLs, crear nuevas pestañas y realizar búsquedas en Google. |
-| **Keyboard** | Escribir texto y ejecutar atajos de teclado. |
-| **Mouse** | Mover el cursor, realizar clics y desplazamiento (scroll). |
-| **Media & YouTube** | Reproducir canciones específicas en YouTube y controlar la reproducción global (play, pause y siguiente). |
-| **System Information** | Consultar hora, batería, uso de CPU, uso de memoria, procesos en ejecución y capturar screenshots. |
-| **Command Execution** | Ejecutar comandos de terminal. |
-
-## 👨‍💻 Autor
-
-* **bktmatjv** 
+*Desarrollado para optimizar la productividad y automatización en el entorno de escritorio.*

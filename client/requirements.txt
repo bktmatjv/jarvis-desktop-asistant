@@ -1,0 +1,11 @@
+pywebview
+pynput
+websockets
+psutil
+python-dotenv
+pyautogui
+
+# Dependencias exclusivas de Windows (ignoradas en Linux)
+pywinauto; sys_platform == 'win32'
+comtypes; sys_platform == 'win32'
+pycaw; sys_platform == 'win32'

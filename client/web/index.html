@@ -8,6 +8,8 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+    <!-- OVERLAY CRT (Holograma/Scanlines) -->
+    <div class="crt-overlay"></div>
 
     <div class="hud-wrapper" id="mainWrapper">
         
@@ -42,17 +44,34 @@
             </div>
 
             <div class="command-container">
-                <div id="greetingDisplay" style="color: var(--jarvis-cyan); font-size: 18px; margin-bottom: 20px; font-weight: bold; letter-spacing: 2px;">
-                    INICIALIZANDO...
+                <div class="command-column-left">
+                    <div id="greetingDisplay" style="color: var(--jarvis-cyan); font-size: 18px; margin-bottom: 20px; font-weight: bold; letter-spacing: 2px;">
+                        INICIALIZANDO...
+                    </div>
+                    
+                    <div id="jarvisResponse" class="jarvis-response">
+                        SISTEMA EN LÍNEA. ESPERANDO ÓRDENES.
+                    </div>
+
+                    <div id="status">[ AWAITING_INPUT ]</div>
+                    <input type="text" id="commandInput" placeholder=">_ INGRESE COMANDO" autocomplete="off" spellcheck="false" autofocus>
+                    
+                    <div class="visualizer-container" id="audioViz"></div>
                 </div>
-                
-                <div id="jarvisResponse" class="jarvis-response">
-                    SISTEMA EN LÍNEA. ESPERANDO ÓRDENES.
+
+                <div class="command-column-right">
+                    <!-- TERMINAL DINÁMICA (Acciones en vivo) -->
+                    <div id="actionDisplay" class="action-display">
+                        <div class="action-header" id="actionHeader">[ STANDBY ]</div>
+                        <div id="actionText" class="action-text">>_ WAITING FOR PROCESS...</div>
+                    </div>
+
+                    <!-- RESULTADO DE LA TERMINAL (Output en vivo) -->
+                    <div id="outputDisplay" class="output-display" style="opacity: 0.2;">
+                        <div class="output-header">[ STDOUT ]</div>
+                        <div id="outputText" class="output-text">NO DATA</div>
+                    </div>
                 </div>
-                <div id="status">[ AWAITING_INPUT ]</div>
-                <input type="text" id="commandInput" placeholder=">_ INGRESE COMANDO" autocomplete="off" spellcheck="false" autofocus>
-                
-                <div class="visualizer-container" id="audioViz"></div>
             </div>
         </div>
 
@@ -71,6 +90,19 @@
             
         </div>
 
+    </div>
+
+    <!-- SECURITY MODAL -->
+    <div id="securityModal" class="security-modal" style="display: none;">
+        <div class="security-box">
+            <div class="security-warning">⚠️ PELIGRO DETECTADO</div>
+            <div id="securityMessage" class="security-message">El servidor intentó ejecutar un comando peligroso:</div>
+            <div id="securityCommand" class="security-command">rm -rf /</div>
+            <div class="security-actions">
+                <button onclick="confirmSecurity(true)" class="btn-allow">PERMITIR EJECUCIÓN</button>
+                <button onclick="confirmSecurity(false)" class="btn-deny">DENEGAR</button>
+            </div>
+        </div>
     </div>
 
     <script src="script.js"></script>
