@@ -12,7 +12,15 @@ env_path = ROOT_DIR / ".env"
 class Settings(BaseSettings):
     GROQ_API_KEYS: str
     MONGO_URI: str = "mongodb://localhost:27017"
-    LLM_MODEL: str = "llama-3.3-70b-versatile"
+    TAVILY_API_KEY: str = ""
+
+    # Dual-Model Architecture (Groq Cloud Only)
+    # Fast router model: classifies intent, generates stalling phrases
+    ROUTER_MODEL: str = "openai/gpt-oss-20b"
+    # Heavy reasoning model: handles tool calling and complex reasoning
+    REASONING_MODEL: str = "qwen/qwen3.6-27b"
+    # Enable stalling phrases while reasoning model works
+    STALLING_ENABLED: bool = True
 
     model_config = SettingsConfigDict(
         env_file=str(env_path),

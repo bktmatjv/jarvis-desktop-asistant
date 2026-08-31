@@ -1,0 +1,16 @@
+{
+    "name": "web_fetch",
+    "description": "Descarga y extrae el texto legible de una página web a partir de su URL. Útil para leer artículos completos u obtener detalles de un link encontrado en una búsqueda.",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "url": {
+                "type": "string",
+                "description": "La URL de la página web a leer (ej. 'https://es.wikipedia.org/wiki/...')"
+            }
+        },
+        "required": ["url"]
+    },
+    "executable": "main.py",
+    "language": "python"
+}

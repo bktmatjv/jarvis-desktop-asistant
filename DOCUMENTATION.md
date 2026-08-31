@@ -1,54 +1,66 @@
 # Documentación Técnica de JARVIS
 
-Esta documentación explica las entrañas del sistema y la arquitectura asíncrona sobre la que está construido.
+Esta documentación explica las entrañas del sistema y la arquitectura asíncrona modular sobre la que está construido.
 
 ## 1. Topología del Sistema
-JARVIS es un sistema desacoplado, lo que significa que el "cerebro" está completamente separado del entorno del cliente. 
+JARVIS es un sistema desacoplado. El cerebro (razonamiento y enrutamiento) está separado de los brazos/ojos (entorno cliente/desktop).
 
-- **El Backend:** Un motor impulsado por `FastAPI`. Tiene conexión constante con bases de datos como `MongoDB` para la retención a largo plazo. Es el encargado de enviar el historial al modelo (LLM) y tomar decisiones sobre qué debe pasar a continuación.
-- **El Cliente:** Una interfaz en Python, renderizando HTML/JS/CSS a través de `PyWebView`. Su única responsabilidad es estar conectado por `WebSockets` al backend, mostrar información en pantalla, y escuchar atajos de teclado globales.
+- **El Backend (Cerebro):** Impulsado por `FastAPI`. Tiene conexión constante con `MongoDB` para la retención histórica de conversaciones y herramientas ejecutadas (Tool Calls). Incorpora servicios modulares (`voice_service`, `skill_service`, `router_service`) para delegar lógicas complejas sin inflar el enrutador principal de WebSockets.
+- **El Cliente (Cuerpo):** Interfaz en Python usando `PyWebView`. Escucha al usuario mediante el motor de reconocimiento local (`Vosk` a través de `wake_word.py` y `stt_engine.py`) y transmite texto al backend. También ejecuta scripts seguros (Herramientas OS) que el backend instruye.
 
-![Topología Local vs Backend](client/img/flujo.png)
+## 2. Ejecución de Comandos (Tool Calling y Abstracción de OS)
 
-## 2. Ejecución de Comandos (Tool Calling)
-Cuando el usuario emite una instrucción (ej. "abre Firefox"), el flujo de ejecución es el siguiente:
-1. Cliente envía el texto por WebSocket.
-2. Backend lo procesa, consulta al LLM, y el LLM responde con una llamada a la herramienta `execute_bash`.
-3. El Backend NO ejecuta esto (para evitar vulnerabilidades de inyección en el servidor). En cambio, le manda un mensaje al Cliente: `{"type": "tool_call", "command": "firefox"}`.
-4. El Cliente lo ejecuta localmente con `subprocess.Popen`, captura la salida (`stdout/stderr`), y la manda de vuelta al Backend.
-5. El Backend se lo entrega al LLM, quien finalmente genera una frase conversacional (`speak`).
+Para garantizar compatibilidad entre sistemas, las Herramientas Locales en el cliente se han modularizado.
 
-![Diagrama de Secuencia de Tool Calling](client/img/secuencia.png)
+Cuando el usuario pide una acción local (ej. "sube el volumen" o "abre la consola"), el flujo es:
+1. El Cliente capta el audio (STT) y envía el string al Backend.
+2. El Backend consulta al LLM con las definiciones de herramientas (`tools schema`).
+3. El LLM responde con una llamada a la herramienta `system_media_control` o similar.
+4. El Backend instruye al Cliente ejecutar la herramienta pasándole parámetros neutros.
+5. **Capa OS:** El Cliente determina en qué OS está corriendo (`sys.platform`) y delega la ejecución al módulo correspondiente dentro de `client/tools/system/`.
+   - *En Linux:* Usaría ALSA o PulseAudio.
+   - *En Windows:* Usaría pycaw / NirCmd.
+6. El Cliente devuelve el `STDOUT` de la ejecución al Backend para que el LLM lo procese.
 
 ## 3. Autonomía y Proactividad (APScheduler)
-JARVIS cuenta con autonomía proactiva mediante la integración de `APScheduler` y el módulo `ConnectionManager`, lo que permite al servidor iniciar comunicaciones de forma independiente (Push messages).
-Mediante el módulo `scheduler_service`, el LLM expone herramientas de ejecución del lado del servidor (ej. `schedule_reminder`).
-Al solicitar la calendarización de una tarea, el sistema registra el evento en el `AsyncIOScheduler`. Una vez que expira el tiempo establecido, el proceso en segundo plano envía un evento WebSocket directo al cliente, demostrando un comportamiento asíncrono y proactivo.
+JARVIS cuenta con autonomía proactiva mediante la integración de `APScheduler` y el módulo `ConnectionManager`, lo que permite al servidor iniciar comunicaciones (Push messages).
+Al solicitar la calendarización de una tarea, el sistema registra el evento en el `AsyncIOScheduler`. Una vez expira el tiempo, el proceso secundario envía un payload al cliente vía WebSocket que renderiza alertas visuales en el HUD.
 
-## 4. Estructura de Directorios
+## 4. Estructura de Directorios (v2.1)
 
 ```
 jarvis/
 ├── backend/
 │   ├── app/
-│   │   ├── api/websockets/chat.py      # Gestor WS y lógica de enrutamiento
-│   │   ├── core/config.py              # Variables de entorno cargadas con Pydantic
-│   │   ├── models/schemas.py           # Modelos Pydantic para tipado estricto JSON
+│   │   ├── api/websockets/chat.py      # Gestor WS y delegación al LLM
+│   │   ├── core/config.py              # Variables de entorno y DB config
+│   │   ├── models/schemas.py           # Modelos Pydantic para APIs
 │   │   ├── services/
-│   │   │   ├── connection_manager.py   # Registro de WS activos
-│   │   │   ├── llm_service.py          # Groq LLM logic, Tools, y Rate Limit rotativo
+│   │   │   ├── connection_manager.py   # Registro de WS
+│   │   │   ├── llm_service.py          # Groq LLM logic y Rate Limits
 │   │   │   ├── memory_service.py       # MongoDB Chat History
+│   │   │   ├── router_service.py       # Orquestador del Agentic Loop
+│   │   │   ├── skill_service.py        # Gestión de Habilidades Remotas
+│   │   │   ├── voice_service.py        # Síntesis TTS y procesado
 │   │   │   └── scheduler_service.py    # APScheduler Background tasks
-│   │   └── main.py                     # Entry point y lifespan events
-│   └── requirements.txt
+│   │   └── main.py                     # Entry point (Uvicorn)
+│   └── skills/                         # Módulos LLM enchufables al Backend
 ├── client/
-│   ├── web/                            # Frontend assets (HTML, JS, CSS)
-│   ├── img/                            # Capturas de pantalla y multimedia
+│   ├── memory/                         # Archivos de caché del SO local (ignorados en Git)
+│   ├── model/                          # Modelo Vosk descargado localmente
+│   ├── tools/
+│   │   ├── system/
+│   │   │   ├── linux/                  # Operaciones puras de Bash/Linux
+│   │   │   └── windows/                # Operaciones puras de CMD/PowerShell
+│   │   ├── input_tool.py               # Emulación de teclado/mouse
+│   │   └── system_info_tool.py         # Telemetría de sensores (CPU/RAM)
+│   ├── web/                            # Frontend assets (HTML, JS, CSS) sin Emojis
 │   ├── connection.py                   # Motor WS cliente
-│   ├── executor/executor.py            # Analizador del JSON recibido del Backend
-│   ├── main.py                         # UI, Bandeja del sistema, Hotkeys y PyWebView
-│   └── repl.py                         # Motor seguro de bash execution local
-├── .env                                # Claves (No subido al repo)
+│   ├── executor/executor.py            # Validador y parser de herramientas (Interceptador de Peligro)
+│   ├── stt_engine.py                   # Speech to Text local
+│   ├── wake_word.py                    # Escucha en bucle infinito (offline)
+│   ├── main.py                         # UI, Atajos globales y PyWebView container
+│   └── repl.py                         # Bash/Terminal asíncrono
 ├── .env.example
 ├── .gitignore
 ├── DOCUMENTATION.md

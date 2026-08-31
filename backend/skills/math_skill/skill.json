@@ -1,0 +1,20 @@
+{
+    "name": "math_skill",
+    "description": "Suma dos números y devuelve el resultado. Útil para verificar que las skills dinámicas funcionan.",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "a": {
+                "type": "number",
+                "description": "Primer número"
+            },
+            "b": {
+                "type": "number",
+                "description": "Segundo número"
+            }
+        },
+        "required": ["a", "b"]
+    },
+    "executable": "main.py",
+    "language": "python"
+}

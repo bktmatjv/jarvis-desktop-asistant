@@ -6,6 +6,7 @@ from fastapi import FastAPI
 from contextlib import asynccontextmanager
 from app.api.websockets.chat import router as chat_router
 from app.services.scheduler_service import scheduler
+import threading
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):

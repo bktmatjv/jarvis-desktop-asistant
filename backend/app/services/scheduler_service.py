@@ -29,7 +29,7 @@ def schedule_reminder(session_id: str, message: str, delay_seconds: int):
     Programa una tarea para ejecutarse dentro de X segundos.
     """
     run_date = datetime.now() + timedelta(seconds=delay_seconds)
-    print(f"📅 [SCHEDULER] Agendado '{message}' para {run_date} (en {delay_seconds}s)")
+    print(f" [SCHEDULER] Agendado '{message}' para {run_date} (en {delay_seconds}s)")
     
     scheduler.add_job(
         push_notification,

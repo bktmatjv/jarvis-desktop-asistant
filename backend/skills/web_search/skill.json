@@ -1,0 +1,20 @@
+{
+    "name": "web_search",
+    "description": "Realiza una búsqueda web en tiempo real. Útil para obtener información actualizada, noticias, clima o datos en vivo.",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "query": {
+                "type": "string",
+                "description": "La consulta de búsqueda (ej. 'partido de universidad de chile hoy')"
+            },
+            "max_results": {
+                "type": "integer",
+                "description": "Número máximo de resultados a devolver (por defecto 5)"
+            }
+        },
+        "required": ["query"]
+    },
+    "executable": "main.py",
+    "language": "python"
+}

@@ -46,3 +46,6 @@ package-lock.json
 
 # Caches de Groq / APIs
 .cache/
+
+client/model/
+client/memory/*.json
