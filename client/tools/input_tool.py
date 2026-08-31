@@ -24,7 +24,7 @@ def mouse_move(params):
     x = params.get("x")
     y = params.get("y")
     if x is not None and y is not None:
-        print(f"🖱️ Jarvis moviendo mouse a: {x}, {y}")
+        print(f"️ Jarvis moviendo mouse a: {x}, {y}")
         pyautogui.moveTo(x, y, duration=0.25)
 
 def mouse_click(params):
@@ -35,10 +35,10 @@ def mouse_click(params):
         pyautogui.click(x, y)
     else:
         pyautogui.click()
-    print("🖱️ Jarvis hizo clic.")
+    print("️ Jarvis hizo clic.")
 
 def mouse_scroll(params):
     """Hace scroll. Valores positivos suben, negativos bajan."""
     amount = params.get("amount", 0)
-    print(f"🖱️ Jarvis haciendo scroll: {amount}")
+    print(f"️ Jarvis haciendo scroll: {amount}")
     pyautogui.scroll(amount)

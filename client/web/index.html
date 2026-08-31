@@ -11,27 +11,49 @@
     <!-- OVERLAY CRT (Holograma/Scanlines) -->
     <div class="crt-overlay"></div>
 
-    <div class="hud-wrapper" id="mainWrapper">
-        
+    <div class="hud-wrapper">
         <div class="side-panel">
+            <!-- User Profile -->
+            <div class="data-block profile-block" style="position: relative;">
+                <button onclick="toggleAdminDashboard()" class="admin-btn">ADMIN</button>
+                <div class="data-title">USUARIO</div>
+                <div class="profile-content">
+                    <div class="profile-pic"></div>
+                    <div class="profile-name">MATIAS JAVIER</div>
+                </div>
+            </div>
+
+            <!-- Notifications -->
+            <div class="data-block notifications-block">
+                <div class="data-title">NOTIFICACIONES</div>
+                <div class="notification-item error"><span class="icon">️</span> Alertas de conexión <span class="badge badge-red">!</span></div>
+                <div class="notification-item warning"><span class="icon"></span> Actualización de sistemas <span class="badge">?</span></div>
+                <div class="notification-item info"><span class="icon"></span> Sumario de actualizaciones <span class="badge">?</span></div>
+                <button class="expand-btn">EXPANDIR</button>
+            </div>
+
+            <!-- Existing System Info (modified slightly) -->
             <div class="data-block">
                 <div class="data-title">SYSTEM.INFO</div>
                 <div id="cpuData">CPU: CALCULATING...</div>
                 <div id="ramData">RAM: CALCULATING...</div>
-                <div id="ramBar" style="width: 100%; height: 4px; background: rgba(0,229,255,0.2); margin-top: 5px;">
-                    <div id="ramFill" style="width: 0%; height: 100%; background: var(--jarvis-cyan); box-shadow: var(--jarvis-glow); transition: width 0.5s;"></div>
+                <div id="ramBar" class="progress-bar-bg">
+                    <div id="ramFill" class="progress-bar-fill"></div>
+                </div>
+            </div>
+
+            <!-- Servers Status -->
+            <div class="data-block server-status-block" style="margin-top: auto;">
+                <div class="data-title">ESTADO DEL SISTEMA DE SERVIDORES</div>
+                <div id="dynamicServersList">
+                    <div class="server-status"><span class="server-icon">️</span> Buscando servidores... <span class="status-ok">WAIT</span></div>
                 </div>
             </div>
             
-            <div class="data-block">
-                <div class="data-title">UPLINK.STATUS</div>
-                <div>PING: <span style="color: #00ff00;">12ms</span></div>
-                <div>PACKETS: SECURE</div>
-            </div>
-
-            <div class="data-block" style="margin-top: auto; margin-bottom: 10px; width: 100%; max-width: 280px;">
+            <!-- Live Logs (Moved to bottom of left panel) -->
+            <div class="data-block live-logs-block">
                 <div class="data-title">LIVE.LOGS</div>
-                <div id="miniConsole" style="height: 140px; width: 100%; overflow-y: hidden; text-align: left; font-size: 11px; color: #00e5ff; background: rgba(0,0,0,0.5); border: 1px solid rgba(0,229,255,0.2); padding: 8px; box-sizing: border-box; display: flex; flex-direction: column; gap: 4px;">
+                <div id="miniConsole" class="mini-console">
                     <div style="color: #00ff00;">>_ SYS.ONLINE</div>
                 </div>
             </div>
@@ -41,61 +63,121 @@
             <div class="reactor-core">
                 <div class="reactor-ring-1" id="ring1"></div>
                 <div class="reactor-ring-2"></div>
+                <div class="core-globe"></div>
             </div>
 
             <div class="command-container">
-                <div class="command-column-left">
-                    <div id="greetingDisplay" style="color: var(--jarvis-cyan); font-size: 18px; margin-bottom: 20px; font-weight: bold; letter-spacing: 2px;">
-                        INICIALIZANDO...
+                <div class="system-header">
+                    <div class="main-title">SISTEMA CENTRAL DE JARVIS</div>
+                    <div class="subtitle">
+                        NÚCLEO DE PROTOCOLO INIT: ACTIVO <span class="progress-inline"><span class="progress-inline-fill"></span></span>
                     </div>
-                    
-                    <div id="jarvisResponse" class="jarvis-response">
-                        SISTEMA EN LÍNEA. ESPERANDO ÓRDENES.
-                    </div>
-
-                    <div id="status">[ AWAITING_INPUT ]</div>
-                    <input type="text" id="commandInput" placeholder=">_ INGRESE COMANDO" autocomplete="off" spellcheck="false" autofocus>
-                    
-                    <div class="visualizer-container" id="audioViz"></div>
                 </div>
 
-                <div class="command-column-right">
-                    <!-- TERMINAL DINÁMICA (Acciones en vivo) -->
-                    <div id="actionDisplay" class="action-display">
-                        <div class="action-header" id="actionHeader">[ STANDBY ]</div>
-                        <div id="actionText" class="action-text">>_ WAITING FOR PROCESS...</div>
+                <div class="command-layout">
+                    <div class="command-column-left">
+                        <div id="greetingDisplay" class="greeting-display">
+                            INICIALIZANDO...
+                        </div>
+                        
+                        <div id="jarvisResponse" class="jarvis-response">
+                            SISTEMA EN LÍNEA. ESPERANDO ÓRDENES.
+                        </div>
+
+                        <div id="status">[ AWAITING_INPUT ]</div>
+                        <div class="input-wrapper">
+                            <span class="prompt-icon">>_</span>
+                            <input type="text" id="commandInput" placeholder="INGRESE COMANDO" autocomplete="off" spellcheck="false" autofocus>
+                            <span class="mic-icon">️</span>
+                        </div>
+                        
+                        <div class="visualizer-container" id="audioViz"></div>
                     </div>
 
-                    <!-- RESULTADO DE LA TERMINAL (Output en vivo) -->
-                    <div id="outputDisplay" class="output-display" style="opacity: 0.2;">
-                        <div class="output-header">[ STDOUT ]</div>
-                        <div id="outputText" class="output-text">NO DATA</div>
+                    <div class="command-column-right">
+                        <div id="actionDisplay" class="action-display">
+                            <div class="action-header" id="actionHeader">[ STANDBY ]</div>
+                            <div id="actionText" class="action-text">>_ WAITING FOR PROCESS...</div>
+                        </div>
+
+                        <div id="outputDisplay" class="output-display" style="opacity: 0.2;">
+                            <div class="output-header">[ STDOUT ]</div>
+                            <div id="outputText" class="output-text">NO DATA</div>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div class="side-panel" style="align-items: flex-end; text-align: right;">
+        <div class="side-panel right-panel">
             
-            <div class="data-block" style="border-left: none; border-right: 2px solid var(--jarvis-cyan); padding-left: 0; padding-right: 10px;">
-                <div class="data-title">MODULES.ACTIVE</div>
-                <div>EXEC_ENGINE: ON</div>
-                <div>PLANNER_AI: RUNNING</div>
-                <div>MEMORY_DB: SYNCED</div>
+            <!-- Global Network Status -->
+            <div class="data-block network-block">
+                <div class="data-title">ESTADO GLOBAL DE RED</div>
+                <div class="network-visual">
+                    <div class="network-globe"></div>
+                </div>
+                <div class="network-stats">
+                    <div class="stat-row"><span>RED GLOBAL:</span> <span>98%</span></div>
+                    <div class="stat-row"><span>ANCHO DE BANDA:</span> <span>5 Gbit/s</span></div>
+                    <div class="stat-row"><span>LATENCIA:</span> <span>12ms</span></div>
+                </div>
             </div>
 
-            <div style="margin-top: auto; font-size: 40px; color: #fff; opacity: 0.5;">
+            <!-- Module Status -->
+            <div class="data-block modules-block">
+                <div class="data-title">ESTADO DE MÓDULOS</div>
+                <div class="modules-grid">
+                    <div class="module-item"><div class="module-icon">️</div></div>
+                    <div class="module-item"><div class="module-icon"></div></div>
+                    <div class="module-item"><div class="module-icon">️</div></div>
+                    <div class="module-item"><div class="module-icon"></div></div>
+                </div>
+                <div class="modules-labels">
+                    <div>Voice</div><div>Data</div><div>Seguridad</div><div>Mantenimiento</div>
+                </div>
+                <div class="modules-status-list">
+                    <div class="status-row"><span>Voice</span> <div class="status-dot green"></div></div>
+                    <div class="status-row"><span>Data</span> <div class="status-dot yellow"></div></div>
+                    <div class="status-row"><span>Seguridad</span> <div class="status-dot green"></div></div>
+                    <div class="status-row"><span>Mantenimiento</span> <div class="status-dot gray"></div></div>
+                </div>
+            </div>
+
+            <!-- TASK PLANNER -->
+            <div id="plannerDisplay" class="data-block planner-block" style="display: none;">
+                <div class="data-title" id="plannerTitle" style="color: #ffaa00;">TASK.PLANNER</div>
+                <div id="plannerSteps" class="planner-steps"></div>
+            </div>
+
+            <div class="clock-container">
                 <div id="clock">00:00</div>
             </div>
             
         </div>
+    </div>
 
+    <!-- ADMIN DASHBOARD MODAL -->
+    <div id="adminDashboard" class="admin-modal" style="display: none;">
+        <div class="admin-box">
+            <div class="admin-header">
+                <span>[ PROTOCOLO ADMINISTRADOR ]</span>
+                <button onclick="toggleAdminDashboard()" class="close-btn">X</button>
+            </div>
+            <div class="admin-title">MONITOREO DE SISTEMAS GLOBALES</div>
+            <div class="admin-stats">
+                Nodos Activos: <span id="adminTotalNodes">0</span>
+            </div>
+            <div id="adminClientsList" class="admin-clients-list">
+                <!-- Se inyectarán los clientes aquí -->
+            </div>
+        </div>
     </div>
 
     <!-- SECURITY MODAL -->
     <div id="securityModal" class="security-modal" style="display: none;">
         <div class="security-box">
-            <div class="security-warning">⚠️ PELIGRO DETECTADO</div>
+            <div class="security-warning">️ PELIGRO DETECTADO</div>
             <div id="securityMessage" class="security-message">El servidor intentó ejecutar un comando peligroso:</div>
             <div id="securityCommand" class="security-command">rm -rf /</div>
             <div class="security-actions">

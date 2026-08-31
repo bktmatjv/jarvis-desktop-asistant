@@ -10,15 +10,24 @@ class TerminalREPL:
         self.process = None
 
     async def start(self):
-        self.process = await asyncio.create_subprocess_exec(
-            '/bin/bash',
-            stdin=asyncio.subprocess.PIPE,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.STDOUT,
-            preexec_fn=os.setsid,
-            cwd=os.path.expanduser("~")
-        )
-        print("🖥️  Terminal REPL iniciada.")
+        if os.name == 'nt':
+            self.process = await asyncio.create_subprocess_exec(
+                'powershell.exe',
+                stdin=asyncio.subprocess.PIPE,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.STDOUT,
+                cwd=os.path.expanduser("~")
+            )
+        else:
+            self.process = await asyncio.create_subprocess_exec(
+                '/bin/bash',
+                stdin=asyncio.subprocess.PIPE,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.STDOUT,
+                preexec_fn=os.setsid,
+                cwd=os.path.expanduser("~")
+            )
+        print("️  Terminal REPL iniciada.")
 
     async def execute_command(self, cmd: str) -> str:
         if not self.process:

@@ -7,7 +7,7 @@ def automate_program(params):
     window_title = params.get("window_title", ".*")
     text_to_type = params.get("text", "")
 
-    print(f"⚙️ Jarvis intentando abrir y controlar: {executable} en Linux...")
+    print(f"️ Jarvis intentando abrir y controlar: {executable} en Linux...")
 
     try:
         # Abre el programa
@@ -16,16 +16,16 @@ def automate_program(params):
 
         # Busca la ventana y la trae al frente usando xdotool
         try:
-            print(f"🔍 Jarvis buscando ventana activa...")
+            print(f" Jarvis buscando ventana activa...")
             # Si pasaste un título específico, xdotool puede buscarlo y activarlo:
             if window_title != ".*":
                 subprocess.run(["xdotool", "search", "--name", window_title, "windowactivate"], check=False)
         except Exception as ex:
-            print(f"⚠️ No se pudo enfocar la ventana por título. {ex}")
+            print(f"️ No se pudo enfocar la ventana por título. {ex}")
 
         # Si Jarvis tiene algo que escribir, lo inyecta
         if text_to_type:
-            print("✍️ Jarvis está escribiendo en el sistema (vía xdotool)...")
+            print("️ Jarvis está escribiendo en el sistema (vía xdotool)...")
             
             # xdotool inyecta el texto simulando pulsaciones
             subprocess.run(["xdotool", "type", "--delay", "50", text_to_type])
@@ -33,7 +33,7 @@ def automate_program(params):
             # Presionamos Enter al final
             subprocess.run(["xdotool", "key", "Return"])
             
-        print("✅ Acción de sistema operativo completada en Linux.")
+        print(" Acción de sistema operativo completada en Linux.")
 
     except FileNotFoundError:
         print("ERROR: Error Crítico: Necesitas instalar 'xdotool' en Linux para simular teclado/mouse.")
