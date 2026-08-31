@@ -1,0 +1,17 @@
+{
+  "name": "media_control",
+  "description": "Controla la reproducción multimedia global del sistema (play, pausa, siguiente, anterior, subir volumen, bajar volumen).",
+  "language": "python",
+  "executable": "main.py",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "action": {
+        "type": "string",
+        "description": "La acción a realizar. Valores permitidos: 'play_pause', 'next', 'previous', 'volume_up', 'volume_down'.",
+        "enum": ["play_pause", "next", "previous", "volume_up", "volume_down"]
+      }
+    },
+    "required": ["action"]
+  }
+}

@@ -16,7 +16,7 @@ def _get_window(title_regex):
 
 def list_windows(params=None):
     """Devuelve una lista de las ventanas visibles actualmente."""
-    print("👁️ Jarvis está escaneando las ventanas abiertas...")
+    print("️ Jarvis está escaneando las ventanas abiertas...")
     try:
         escritorio = Desktop(backend="uia")
         ventanas = escritorio.windows(visible_only=True)
@@ -41,7 +41,7 @@ def focus_window(params):
         print("ERROR: Jarvis necesita el parámetro 'title' para enfocar una ventana.")
         return
         
-    print(f"🔍 Jarvis buscando ventana para enfocar: '{title}'...")
+    print(f" Jarvis buscando ventana para enfocar: '{title}'...")
     try:
         ventana = _get_window(title)
         ventana.set_focus()
@@ -56,7 +56,7 @@ def minimize_window(params):
     title = params.get("title")
     if not title: return
     
-    print(f"🔽 Jarvis minimizando: '{title}'...")
+    print(f" Jarvis minimizando: '{title}'...")
     try:
         ventana = _get_window(title)
         ventana.minimize()
@@ -69,7 +69,7 @@ def maximize_window(params):
     title = params.get("title")
     if not title: return
     
-    print(f"🔼 Jarvis maximizando: '{title}'...")
+    print(f" Jarvis maximizando: '{title}'...")
     try:
         ventana = _get_window(title)
         ventana.maximize()
@@ -82,7 +82,7 @@ def close_window(params):
     title = params.get("title")
     if not title: return
     
-    print(f"❌ Jarvis cerrando ventana: '{title}'...")
+    print(f" Jarvis cerrando ventana: '{title}'...")
     try:
         ventana = _get_window(title)
         ventana.close()

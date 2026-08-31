@@ -12,10 +12,10 @@ def play_youtube_music(params):
     query = params.get("song") or params.get("query")
 
     if not query:
-        print("❌ Jarvis: No me dijiste qué canción poner.")
+        print(" Jarvis: No me dijiste qué canción poner.")
         return
 
-    print(f"🔍 Jarvis buscando en YouTube: '{query}'...")
+    print(f" Jarvis buscando en YouTube: '{query}'...")
 
     try:
         # 1. Formateamos la búsqueda
@@ -38,12 +38,12 @@ def play_youtube_music(params):
             
             # 5. Abrimos el navegador
             webbrowser.open(primer_video_url)
-            print("✅ Navegador abierto.")
+            print(" Navegador abierto.")
         else:
-            print("❌ Jarvis: Encontré la página pero no pude extraer ningún video.")
+            print(" Jarvis: Encontré la página pero no pude extraer ningún video.")
 
     except Exception as e:
-        print(f"❌ Jarvis: Error de conexión o de red al buscar en YouTube: {e}")
+        print(f" Jarvis: Error de conexión o de red al buscar en YouTube: {e}")
 
 # --- FUNCIONES DE CONTROL GLOBAL ---
 

@@ -1,0 +1,16 @@
+{
+  "name": "play_ytmusic",
+  "description": "Busca y reproduce una canción en YouTube Music.",
+  "language": "python",
+  "executable": "main.py",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "song_name": {
+        "type": "string",
+        "description": "El nombre de la canción y artista a buscar y reproducir."
+      }
+    },
+    "required": ["song_name"]
+  }
+}

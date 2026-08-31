@@ -78,7 +78,7 @@ def build_index():
         json.dump(cache_data, f, indent=4)
         
     elapsed = time.time() - start_time
-    print(f"✅ Escaneo completado en {elapsed:.2f} segundos. Se indexaron {len(cache_data)} programas.\n")
+    print(f" Escaneo completado en {elapsed:.2f} segundos. Se indexaron {len(cache_data)} programas.\n")
 
 def _load_cache():
     if CACHE_FILE.exists():
@@ -103,21 +103,21 @@ def find_program(program_name):
         ruta = cache[target]
         ruta_normalizada = os.path.normpath(ruta)
         if os.path.exists(ruta_normalizada):
-            print(f"⚡ [Caché] Jarvis encontró '{target}' exactamente.")
+            print(f" [Caché] Jarvis encontró '{target}' exactamente.")
             return ruta_normalizada
 
     # 2. BÚSQUEDA INTELIGENTE
-    print(f"🔍 Buscando coincidencias para: {target}...")
+    print(f" Buscando coincidencias para: {target}...")
     for name, path in cache.items():
         filename = os.path.basename(path).lower()
         
         if target in name or name in target or target in filename:
             ruta_normalizada = os.path.normpath(path)
             if os.path.exists(ruta_normalizada):
-                print(f"⚡ [Match Inteligente] Jarvis asoció '{target}' con la ruta: {ruta_normalizada}")
+                print(f" [Match Inteligente] Jarvis asoció '{target}' con la ruta: {ruta_normalizada}")
                 return ruta_normalizada
 
-    print(f"❌ Jarvis no pudo encontrar ninguna ruta válida para '{target}' en el índice.")
+    print(f" Jarvis no pudo encontrar ninguna ruta válida para '{target}' en el índice.")
     return None
 
 

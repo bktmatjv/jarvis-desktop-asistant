@@ -8,6 +8,7 @@ import json
 import traceback
 import os
 from dotenv import load_dotenv
+import platform
 from pathlib import Path
 
 # Cargar .env desde la raíz del proyecto
@@ -28,24 +29,27 @@ class JarvisConnection:
         self.running = True
         while self.running:
             try:
-                print(f"🔌 Conectando a {self.uri}...")
+                print(f" Conectando a {self.uri}...")
                 async with websockets.connect(self.uri) as ws:
                     self.websocket = ws
-                    print("✅ Conectado al servidor JARVIS.")
+                    print(" Conectado al servidor JARVIS.")
                     
                     handshake = {
                         "type": "handshake",
                         "client_id": "hud_desktop",
-                        "os": "linux",
-                        "capabilities": ["bash_repl", "ui_render", "audio_record"]
+                        "os": platform.system().lower(),
+                        "capabilities": ["terminal_repl", "ui_render", "audio_record"],
+                        "username": "MATIAS JAVIER",
+                        "role": "admin",
+                        "device_name": platform.node()
                     }
                     await self.websocket.send(json.dumps(handshake))
                     
                     await self.receive_loop()
             except websockets.exceptions.ConnectionClosed:
-                print("❌ Conexión cerrada. Reintentando en 5 segundos...")
+                print(" Conexión cerrada. Reintentando en 5 segundos...")
             except Exception as e:
-                print(f"⚠️ Error de conexión: {e}. Reintentando en 5 segundos...")
+                print(f"️ Error de conexión: {e}. Reintentando en 5 segundos...")
             
             if self.running:
                 await asyncio.sleep(5)
@@ -55,7 +59,8 @@ class JarvisConnection:
             async for message in self.websocket:
                 try:
                     payload = json.loads(message)
-                    print(f"📥 Servidor envió: {payload}")
+                    if payload.get("type") != "system_status":
+                        print(f" Servidor envió: {payload}")
                     
                     if hasattr(self, 'execute_from_server'):
                         response = await self.execute_from_server(payload)
@@ -63,20 +68,20 @@ class JarvisConnection:
                             await self.websocket.send(json.dumps(response))
                         
                 except json.JSONDecodeError:
-                    print("⚠️ Recibido mensaje no JSON del servidor.")
+                    print("️ Recibido mensaje no JSON del servidor.")
                 except Exception as e:
-                    print(f"⚠️ Error procesando comando: {e}")
+                    print(f"️ Error procesando comando: {e}")
                     traceback.print_exc()
         except websockets.exceptions.ConnectionClosedError:
-            print("❌ Conexión perdida.")
+            print(" Conexión perdida.")
 
     async def send_event(self, event_data: dict):
         if self.websocket:
             try:
                 await self.websocket.send(json.dumps(event_data))
             except Exception as e:
-                print(f"⚠️ Error enviando evento: {e}")
+                print(f"️ Error enviando evento: {e}")
         else:
-            print("⚠️ No se pudo enviar el evento, WebSocket desconectado.")
+            print("️ No se pudo enviar el evento, WebSocket desconectado.")
 
 connection_instance = JarvisConnection()

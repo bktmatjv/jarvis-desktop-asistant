@@ -22,7 +22,7 @@ def _get_window_id(title_regex):
 
 def list_windows(params=None):
     """Devuelve una lista de las ventanas visibles actualmente en Linux usando wmctrl."""
-    print("👁️ Jarvis está escaneando las ventanas abiertas (Linux)...")
+    print("️ Jarvis está escaneando las ventanas abiertas (Linux)...")
     try:
         result = subprocess.run(["wmctrl", "-l"], capture_output=True, text=True, check=True)
         
@@ -34,7 +34,7 @@ def list_windows(params=None):
                 if title not in ["Desktop", "panel", "cinnamon", "gnome-shell"]:
                     titulos.append(title)
                     
-        print(f"✅ Se encontraron {len(titulos)} ventanas activas.")
+        print(f" Se encontraron {len(titulos)} ventanas activas.")
         return titulos
         
     except FileNotFoundError:
@@ -49,7 +49,7 @@ def focus_window(params):
     title = params.get("title")
     if not title: return
         
-    print(f"🔍 Jarvis buscando ventana para enfocar: '{title}'...")
+    print(f" Jarvis buscando ventana para enfocar: '{title}'...")
     win_id = _get_window_id(title)
     
     if win_id:
@@ -64,7 +64,7 @@ def minimize_window(params):
     title = params.get("title")
     if not title: return
     
-    print(f"🔽 Jarvis minimizando: '{title}'...")
+    print(f" Jarvis minimizando: '{title}'...")
     win_id = _get_window_id(title)
     
     if win_id:
@@ -84,9 +84,9 @@ def maximize_window(params):
     if win_id:
         # wmctrl -i -r <ID> altera las propiedades del ID exacto
         subprocess.run(["wmctrl", "-i", "-r", win_id, "-b", "add,maximized_vert,maximized_horz"], check=False)
-        print("✅ Ventana maximizada.")
+        print(" Ventana maximizada.")
     else:
-        print(f"❌ No se pudo encontrar '{title}' para maximizar.")
+        print(f" No se pudo encontrar '{title}' para maximizar.")
 
 def close_window(params):
     """Cierra una ventana específica de forma segura en Linux."""
@@ -99,6 +99,6 @@ def close_window(params):
     if win_id:
         # wmctrl -i -c <ID> cierra por ID numérico
         subprocess.run(["wmctrl", "-i", "-c", win_id], check=False)
-        print("✅ Ventana cerrada.")
+        print(" Ventana cerrada.")
     else:
         print(f"ERROR: No se encontró o no se pudo cerrar '{title}'.")
