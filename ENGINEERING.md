@@ -4,6 +4,28 @@ Este documento cubre en profundidad cada decisión de ingeniería tomada durante
 
 ---
 
+## Índice
+
+1. [Arquitectura General: Por qué Cliente-Servidor](#1-arquitectura-general-por-qué-cliente-servidor)
+2. [WebSocket: Por Qué No HTTP/REST](#2-websocket-por-qué-no-httprest)
+3. [El Protocolo de Mensajes: Typed Discriminated Union](#3-el-protocolo-de-mensajes-typed-discriminated-union)
+4. [Loop Engineering: Arquitectura Dual-Model](#4-loop-engineering-arquitectura-dual-model)
+5. [Context Pruner: Gestión de Tokens](#5-context-pruner-gestión-de-tokens)
+6. [Circuit Breaker: Protección Contra Tool Loops](#6-circuit-breaker-protección-contra-tool-loops)
+7. [Sistema de Skills: Plugin Architecture](#7-sistema-de-skills-plugin-architecture)
+8. [Memoria: Sliding Window Context](#8-memoria-sliding-window-context)
+9. [Anti Rate-Limit: Key Rotation Pool](#9-anti-rate-limit-key-rotation-pool)
+10. [Wake Word: Motor Offline con Vocabulario Restringido](#10-wake-word-motor-offline-con-vocabulario-restringido)
+11. [REPL Asíncrono: Ejecución de Comandos sin Bloquear](#11-repl-asíncrono-ejecución-de-comandos-sin-bloquear)
+12. [Interceptor de Seguridad: asyncio.Event como Semáforo](#12-interceptor-de-seguridad-asyncioevent-como-semáforo)
+13. [El Orbe 3D: GLSL Shader Custom + Fresnel Effect](#13-el-orbe-3d-glsl-shader-custom--fresnel-effect)
+14. [PyWebView: Ventana Frameless Dual](#14-pywebview-ventana-frameless-dual)
+15. [Preguntas Frecuentes o Interesantes](#15-preguntas-frecuentes-o-interesantes)
+16. [Stack Tecnológico Resumido](#16-stack-tecnológico-resumido)
+
+---
+
+
 ## 1. Arquitectura General: Por qué Cliente-Servidor
 
 ### La Decisión
@@ -337,7 +359,7 @@ El cliente lanza **dos ventanas independientes** de PyWebView: el Panel de Contr
 
 ---
 
-## 15. Preguntas de Entrevista y Cómo Responderlas
+## 15. Preguntas Frecuentes o Interesantes
 
 ### "¿Por qué usas WebSocket y no Server-Sent Events (SSE)?"
 
