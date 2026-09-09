@@ -3,190 +3,348 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Jarvis Full HUD</title>
+    <title>JARVIS HUD v2.5</title>
+    <!-- Share Tech Mono Font for Sci-Fi Look -->
     <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
+    <!-- Cinematic Activation Animation -->
+    <link rel="stylesheet" href="animation/animation.css">
 </head>
 <body>
-    <!-- OVERLAY CRT (Holograma/Scanlines) -->
-    <div class="crt-overlay"></div>
-
-    <div class="hud-wrapper">
-        <div class="side-panel">
-            <!-- User Profile -->
-            <div class="data-block profile-block" style="position: relative;">
-                <button onclick="toggleAdminDashboard()" class="admin-btn">ADMIN</button>
-                <div class="data-title">USUARIO</div>
-                <div class="profile-content">
-                    <div class="profile-pic"></div>
-                    <div class="profile-name">MATIAS JAVIER</div>
-                </div>
-            </div>
-
-            <!-- Notifications -->
-            <div class="data-block notifications-block">
-                <div class="data-title">NOTIFICACIONES</div>
-                <div class="notification-item error"><span class="icon">️</span> Alertas de conexión <span class="badge badge-red">!</span></div>
-                <div class="notification-item warning"><span class="icon"></span> Actualización de sistemas <span class="badge">?</span></div>
-                <div class="notification-item info"><span class="icon"></span> Sumario de actualizaciones <span class="badge">?</span></div>
-                <button class="expand-btn">EXPANDIR</button>
-            </div>
-
-            <!-- Existing System Info (modified slightly) -->
-            <div class="data-block">
-                <div class="data-title">SYSTEM.INFO</div>
-                <div id="cpuData">CPU: CALCULATING...</div>
-                <div id="ramData">RAM: CALCULATING...</div>
-                <div id="ramBar" class="progress-bar-bg">
-                    <div id="ramFill" class="progress-bar-fill"></div>
-                </div>
-            </div>
-
-            <!-- Servers Status -->
-            <div class="data-block server-status-block" style="margin-top: auto;">
-                <div class="data-title">ESTADO DEL SISTEMA DE SERVIDORES</div>
-                <div id="dynamicServersList">
-                    <div class="server-status"><span class="server-icon">️</span> Buscando servidores... <span class="status-ok">WAIT</span></div>
-                </div>
-            </div>
-            
-            <!-- Live Logs (Moved to bottom of left panel) -->
-            <div class="data-block live-logs-block">
-                <div class="data-title">LIVE.LOGS</div>
-                <div id="miniConsole" class="mini-console">
-                    <div style="color: #00ff00;">>_ SYS.ONLINE</div>
-                </div>
-            </div>
+    <!-- Viewport for swipeable slides -->
+    <div id="jarvis-viewport">
+        <!-- Navigation indicators -->
+        <div class="nav-indicator" id="nav-left">
+            <span>&larr; INICIO</span>
+        </div>
+        <div class="nav-indicator" id="nav-right">
+            <span>PANEL &rarr;</span>
         </div>
 
-        <div class="center-panel">
-            <div class="reactor-core">
-                <div class="reactor-ring-1" id="ring1"></div>
-                <div class="reactor-ring-2"></div>
-                <div class="core-globe"></div>
+        <div id="slides-track">
+            <!-- Slide 0: Home / Boot Screen -->
+            <div class="slide-container" id="slide-home">
+                <!-- The activation overlay is built dynamically by jarvisActivation.js -->
+            </div>
+            
+            <!-- Slide 1: Main Panel -->
+            <div class="slide-container" id="slide-panel">
+                <div class="app-container" id="mainApp" style="opacity: 0; pointer-events: none;">
+
+        
+        <!-- HEADER -->
+        <header class="header">
+            <div class="logo-area">
+                <span class="logo-title">JARVIS</span>
+                <span class="logo-subtitle">JUST A RATHER VERY<br>INTELLIGENT SYSTEM</span>
+            </div>
+            <div class="clock-area">
+                <span id="clock-time">00:00:00</span>
+                <span id="clock-date">01 JAN 2026</span>
+            </div>
+            <div class="header-icons">
+                <div class="icon-btn active" id="btnMic" onclick="toggleBtn(this)">[MIC]</div>
+                <div class="icon-btn active" id="btnVol" onclick="toggleBtn(this)">[VOL]</div>
+                <div class="icon-btn active" id="btnWifi" onclick="toggleBtn(this)">[WIFI]</div>
+                <div class="icon-btn" id="btnCfg" onclick="toggleBtn(this)">[CFG]</div>
+                <div class="window-controls">
+                    <span class="ctrl-btn minimize" onclick="winMin()">-</span>
+                    <span class="ctrl-btn maximize" onclick="winMax()">[]</span>
+                    <span class="ctrl-btn close" onclick="winClose()">X</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- MAIN GRID -->
+        <main class="main-grid">
+            
+            <!-- COLUMN 1: User & Telemetry -->
+            <div class="col-left">
+                <!-- User Profile -->
+                <section class="panel profile-panel">
+                    <div class="panel-header">PERFIL DE USUARIO</div>
+                    <div class="profile-content">
+                        <div class="avatar-ring">
+                            <div class="avatar-img"></div>
+                        </div>
+                        <div class="user-info">
+                            <div class="user-name" id="user-name">USUARIO</div>
+                            <div class="user-role" id="user-role">USUARIO</div>
+                            <div class="user-status"><span class="status-dot green"></span> ONLINE</div>
+                        </div>
+                        <button class="btn-outline" onclick="toggleAdminDashboard()">[ADMIN]</button>
+                    </div>
+                </section>
+
+                <!-- Notifications -->
+                <section class="panel notif-panel">
+                    <div class="panel-header">NOTIFICACIONES <span class="badge red">3</span></div>
+                    <div class="notif-list">
+                        <div class="notif-item"><span class="status-dot green"></span> Sistema conectado <span class="time">22:48:10</span></div>
+                        <div class="notif-item"><span class="status-dot cyan"></span> Actualizacion disp. <span class="time">22:45:02</span></div>
+                        <div class="notif-item"><span class="status-dot red"></span> Intento bloqueado <span class="time">22:44:17</span></div>
+                    </div>
+                    <button class="btn-text">VER TODAS</button>
+                </section>
+
+                <!-- Telemetry (CPU / RAM) -->
+                <section class="panel telemetry-panel">
+                    <div class="panel-header">TELEMETRIA</div>
+                    <div class="charts-container">
+                        <div class="circular-chart cyan">
+                            <svg viewBox="0 0 36 36">
+                                <path class="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                                <path class="circle" id="cpu-ring" stroke-dasharray="62, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                            </svg>
+                            <div class="chart-text">
+                                <div class="label">CPU</div>
+                                <div class="value" id="cpuData">62%</div>
+                            </div>
+                        </div>
+                        <div class="circular-chart red">
+                            <svg viewBox="0 0 36 36">
+                                <path class="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                                <path class="circle" id="ram-ring" stroke-dasharray="78, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                            </svg>
+                            <div class="chart-text">
+                                <div class="label">RAM</div>
+                                <div class="value" id="ramData">78%</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="line-graph"></div>
+                </section>
+
+                <!-- Live Logs -->
+                <section class="panel logs-panel">
+                    <div class="panel-header">LIVE LOGS</div>
+                    <div id="miniConsole" class="logs-content">
+                        <div class="log-line"><span class="time">22:48:35</span> <span class="tag cyan">[INFO]</span> Sistema online...</div>
+                    </div>
+                </section>
             </div>
 
-            <div class="command-container">
-                <div class="system-header">
-                    <div class="main-title">SISTEMA CENTRAL DE JARVIS</div>
-                    <div class="subtitle">
-                        NÚCLEO DE PROTOCOLO INIT: ACTIVO <span class="progress-inline"><span class="progress-inline-fill"></span></span>
+            <!-- COLUMN 2: Central AI & Interaction -->
+            <div class="col-center">
+                <!-- Brain Core & Loop Engineering Visualizer -->
+                <section class="panel brain-panel">
+                    <div class="panel-header">
+                        <div class="header-title-group">
+                            <span class="panel-title-text">CEREBRO CENTRAL // LOOP ENGINEERING</span>
+                            <span class="loop-status-pill standby" id="loopHeaderPill">LOOP STANDBY</span>
+                        </div>
+                        <div class="panel-header-actions">
+                            <button class="panel-tab-btn active" id="tabBtnLoop" onclick="switchBrainView('loop')">[ LOOP GRAPH ]</button>
+                            <button class="panel-tab-btn" id="tabBtnCore" onclick="switchBrainView('core')">[ NEURAL CORE ]</button>
+                            <button class="panel-action-btn" id="btnTestLoop" onclick="simulateLoopCycle('action')" title="Probar flujo de Acción">[ TEST ACCIÓN ]</button>
+                            <button class="panel-action-btn amber" id="btnTestChat" onclick="simulateLoopCycle('chat')" title="Probar flujo de Conversación">[ TEST CHAT ]</button>
+                        </div>
                     </div>
-                </div>
 
-                <div class="command-layout">
-                    <div class="command-column-left">
-                        <div id="greetingDisplay" class="greeting-display">
-                            INICIALIZANDO...
+                    <!-- VISTA 1: GRAFO DE DIALES CIRCULARES HUD (Loop Engineering) -->
+                    <div class="loop-graph-container" id="loopGraphView">
+                        <!-- Generado dinámicamente con estética HUD de diales circulares por loopVisualizer.js -->
+                    </div>
+
+                    <!-- VISTA 2: NUCLEO NEURONAL HOLOGRÁFICO (Original) -->
+                    <div class="brain-layout" id="neuralCoreView" style="display: none;">
+                        <div class="brain-stats-left">
+                            <div class="stat-box">
+                                <div class="label">ESTADO</div>
+                                <div class="value green">ACTIVO</div>
+                            </div>
+                            <div class="stat-box">
+                                <div class="label">SINAPSIS</div>
+                                <div class="value cyan">98.7%</div>
+                            </div>
+                            <div class="stat-box">
+                                <div class="label">PROCESOS</div>
+                                <div class="value cyan" id="active-processes">128</div>
+                            </div>
                         </div>
                         
-                        <div id="jarvisResponse" class="jarvis-response">
-                            SISTEMA EN LÍNEA. ESPERANDO ÓRDENES.
-                        </div>
-
-                        <div id="status">[ AWAITING_INPUT ]</div>
-                        <div class="input-wrapper">
-                            <span class="prompt-icon">>_</span>
-                            <input type="text" id="commandInput" placeholder="INGRESE COMANDO" autocomplete="off" spellcheck="false" autofocus>
-                            <span class="mic-icon">️</span>
+                        <!-- SVG Technological Brain Core -->
+                        <div class="brain-core-svg-container" id="brainCoreSVG">
+                            <div class="brain-hud-rings">
+                                <div class="hud-ring hud-ring-outer"></div>
+                                <div class="hud-ring hud-ring-mid"></div>
+                                <div class="hud-ring hud-ring-inner"></div>
+                            </div>
+                            <div class="brain-nodes" id="brainNodes">
+                                <div class="bnode" style="--a:0deg"></div>
+                                <div class="bnode" style="--a:60deg"></div>
+                                <div class="bnode" style="--a:120deg"></div>
+                                <div class="bnode" style="--a:180deg"></div>
+                                <div class="bnode" style="--a:240deg"></div>
+                                <div class="bnode" style="--a:300deg"></div>
+                            </div>
+                            <div class="brain-core-label">JARVIS<br><span>NEURAL CORE</span></div>
                         </div>
                         
-                        <div class="visualizer-container" id="audioViz"></div>
-                    </div>
-
-                    <div class="command-column-right">
-                        <div id="actionDisplay" class="action-display">
-                            <div class="action-header" id="actionHeader">[ STANDBY ]</div>
-                            <div id="actionText" class="action-text">>_ WAITING FOR PROCESS...</div>
+                        <div class="brain-stats-right">
+                            <div class="stat-box">
+                                <div class="label">CAPACIDAD</div>
+                                <div class="value cyan">92%</div>
+                            </div>
+                            <div class="stat-box">
+                                <div class="label">VELOCIDAD</div>
+                                <div class="value cyan">128%</div>
+                            </div>
+                            <div class="stat-box">
+                                <div class="label">APRENDIZAJE</div>
+                                <div class="value cyan">EN CURSO</div>
+                            </div>
                         </div>
+                    </div>
+                    <div class="brain-footer-text" id="brainFooterText">ARQUITECTURA MULTI-MODELO // LOOP ENGINEERING DINÁMICO</div>
+                </section>
 
-                        <div id="outputDisplay" class="output-display" style="opacity: 0.2;">
-                            <div class="output-header">[ STDOUT ]</div>
-                            <div id="outputText" class="output-text">NO DATA</div>
+                <!-- Chat Interaction -->
+                <section class="panel chat-panel">
+                    <div class="panel-header">CHAT / INTERACCION <span class="status-text" id="status">[ JARVIS ONLINE ]</span></div>
+                    <div class="chat-history" id="chatHistory">
+                        <div class="message system">[ SYSTEM ] Conexion con JARVIS establecida.</div>
+                    </div>
+                    
+                    <div class="chat-input-area">
+                        <span class="prompt-icon">>_</span>
+                        <input type="text" id="commandInput" placeholder="Escribe un comando o consulta..." autocomplete="off" spellcheck="false">
+                        <button class="send-btn" id="sendBtn">[>]</button>
+                    </div>
+                </section>
+
+                <!-- Audio Visualizer -->
+                <section class="panel viz-panel">
+                    <div class="panel-header">VISUALIZADOR DE AUDIO</div>
+                    <div class="visualizer-container" id="audioViz"></div>
+                </section>
+            </div>
+
+            <!-- COLUMN 3: Global & Tasks -->
+            <div class="col-right">
+                <!-- Action & STDOUT -->
+                <section class="panel stdout-panel">
+                    <div class="panel-header">ACTION & STDOUT</div>
+                    <div class="stdout-content">
+                        <div id="actionDisplay" class="action-text">>_ WAITING FOR PROCESS...</div>
+                        <div id="outputDisplay" class="output-text" style="opacity: 0.2;">NO DATA</div>
+                    </div>
+                </section>
+
+                <!-- Network Status -->
+                <section class="panel network-panel">
+                    <div class="panel-header">ESTADO GLOBAL RED</div>
+                    <div class="network-globe-container">
+                        <div class="network-globe" id="earthGlobe"></div>
+                    </div>
+                    <div class="network-stats">
+                        <div class="net-stat">
+                            <div class="icon">[B]</div>
+                            <div class="details">
+                                <div class="label">ANCHO DE BANDA</div>
+                                <div class="value">1.28 Gbps</div>
+                            </div>
+                        </div>
+                        <div class="net-stat">
+                            <div class="icon">[L]</div>
+                            <div class="details">
+                                <div class="label">LATENCIA</div>
+                                <div class="value">23 ms</div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Module Status -->
+                <section class="panel modules-panel">
+                    <div class="panel-header">ESTADO MODULOS</div>
+                    <div class="modules-list">
+                        <div class="mod-item"><span>[V] VOZ</span> <span class="green">OPERATIVO <span class="status-dot green"></span></span></div>
+                        <div class="mod-item"><span>[D] DATOS</span> <span class="green">OPERATIVO <span class="status-dot green"></span></span></div>
+                        <div class="mod-item"><span>[S] SEGURIDAD</span> <span class="orange">ADVERTENCIA <span class="status-dot orange"></span></span></div>
+                        <div class="mod-item"><span>[M] MANTENIMIENTO</span> <span class="green">OPERATIVO <span class="status-dot green"></span></span></div>
+                    </div>
+                </section>
+
+                <!-- Task Planner -->
+                <section class="panel planner-panel">
+                    <div class="panel-header" id="plannerTitle">TASK PLANNER</div>
+                    <div class="planner-list" id="plannerSteps">
+                        <div class="task-item green">[X] Verificar estado del sistema</div>
+                        <div class="task-item cyan">[-] Analizar uso de recursos</div>
+                        <div class="task-item red">[!] Actualizar base de datos</div>
+                    </div>
+                </section>
+            </div>
+        </main>
+
+        <!-- BOTTOM MODALS -->
+        <div class="bottom-modals">
+            <!-- Security Modal Alert -->
+            <section class="panel security-panel" id="securityModal" style="display: none;">
+                <div class="panel-header red">SEGURIDAD: ACCION PELIGROSA <button onclick="document.getElementById('securityModal').style.display='none'" class="close-x">X</button></div>
+                <div class="security-content">
+                    <div class="alert-icon red">[!]</div>
+                    <div class="alert-details">
+                        <p>La accion que intentas ejecutar es potencialmente peligrosa y puede causar daños irreversibles.</p>
+                        <div class="command-box" id="securityCommand">rm -rf /</div>
+                        <p>Deseas continuar con esta accion?</p>
+                        <div class="btn-group">
+                            <button class="btn-outline red-outline" onclick="confirmSecurity(false)">CANCELAR</button>
+                            <button class="btn-solid red-solid" onclick="confirmSecurity(true)">CONFIRMAR</button>
                         </div>
                     </div>
                 </div>
-            </div>
+            </section>
+
+            <!-- Admin Dashboard -->
+            <section class="panel admin-panel" id="adminDashboard" style="display: none;">
+                <div class="panel-header">DASHBOARD ADMIN <button onclick="toggleAdminDashboard()" class="close-x">X</button></div>
+                <div class="admin-content">
+                    <div class="admin-stat-box">
+                        <div class="label">NODOS ACTIVOS</div>
+                        <div class="val" id="adminTotalNodes">3</div>
+                        <div class="icon-tree"></div>
+                    </div>
+                    <div class="admin-stat-box">
+                        <div class="label">USUARIOS CONECTADOS</div>
+                        <div class="val">7</div>
+                        <button class="btn-text">VER TODOS</button>
+                    </div>
+                    <div class="admin-devices">
+                        <div class="label">DISPOSITIVOS</div>
+                        <div class="dev-list" id="adminClientsList">
+                            <div class="dev-item"><span id="device-name">JARVIS-HOST</span> <span class="green">ONLINE</span></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
         </div>
 
-        <div class="side-panel right-panel">
-            
-            <!-- Global Network Status -->
-            <div class="data-block network-block">
-                <div class="data-title">ESTADO GLOBAL DE RED</div>
-                <div class="network-visual">
-                    <div class="network-globe"></div>
+        <!-- FOOTER -->
+        <footer class="footer">
+            <span class="foot-item">JARVIS OS v2.5.1</span>
+            <span class="foot-item">NODO: JARVIS-CORE-01</span>
+            <span class="foot-item">IP: 192.168.1.100</span>
+            <span class="foot-item">CIFRADO: AES-256</span>
+            <span class="foot-item">NIVEL DE ACCESO: USUARIO</span>
+            <span class="foot-item right">UPTIME: 2D 14H 32M</span>
+        </footer>
+
                 </div>
-                <div class="network-stats">
-                    <div class="stat-row"><span>RED GLOBAL:</span> <span>98%</span></div>
-                    <div class="stat-row"><span>ANCHO DE BANDA:</span> <span>5 Gbit/s</span></div>
-                    <div class="stat-row"><span>LATENCIA:</span> <span>12ms</span></div>
-                </div>
-            </div>
-
-            <!-- Module Status -->
-            <div class="data-block modules-block">
-                <div class="data-title">ESTADO DE MÓDULOS</div>
-                <div class="modules-grid">
-                    <div class="module-item"><div class="module-icon">️</div></div>
-                    <div class="module-item"><div class="module-icon"></div></div>
-                    <div class="module-item"><div class="module-icon">️</div></div>
-                    <div class="module-item"><div class="module-icon"></div></div>
-                </div>
-                <div class="modules-labels">
-                    <div>Voice</div><div>Data</div><div>Seguridad</div><div>Mantenimiento</div>
-                </div>
-                <div class="modules-status-list">
-                    <div class="status-row"><span>Voice</span> <div class="status-dot green"></div></div>
-                    <div class="status-row"><span>Data</span> <div class="status-dot yellow"></div></div>
-                    <div class="status-row"><span>Seguridad</span> <div class="status-dot green"></div></div>
-                    <div class="status-row"><span>Mantenimiento</span> <div class="status-dot gray"></div></div>
-                </div>
-            </div>
-
-            <!-- TASK PLANNER -->
-            <div id="plannerDisplay" class="data-block planner-block" style="display: none;">
-                <div class="data-title" id="plannerTitle" style="color: #ffaa00;">TASK.PLANNER</div>
-                <div id="plannerSteps" class="planner-steps"></div>
-            </div>
-
-            <div class="clock-container">
-                <div id="clock">00:00</div>
-            </div>
-            
-        </div>
-    </div>
-
-    <!-- ADMIN DASHBOARD MODAL -->
-    <div id="adminDashboard" class="admin-modal" style="display: none;">
-        <div class="admin-box">
-            <div class="admin-header">
-                <span>[ PROTOCOLO ADMINISTRADOR ]</span>
-                <button onclick="toggleAdminDashboard()" class="close-btn">X</button>
-            </div>
-            <div class="admin-title">MONITOREO DE SISTEMAS GLOBALES</div>
-            <div class="admin-stats">
-                Nodos Activos: <span id="adminTotalNodes">0</span>
-            </div>
-            <div id="adminClientsList" class="admin-clients-list">
-                <!-- Se inyectarán los clientes aquí -->
-            </div>
-        </div>
-    </div>
-
-    <!-- SECURITY MODAL -->
-    <div id="securityModal" class="security-modal" style="display: none;">
-        <div class="security-box">
-            <div class="security-warning">️ PELIGRO DETECTADO</div>
-            <div id="securityMessage" class="security-message">El servidor intentó ejecutar un comando peligroso:</div>
-            <div id="securityCommand" class="security-command">rm -rf /</div>
-            <div class="security-actions">
-                <button onclick="confirmSecurity(true)" class="btn-allow">PERMITIR EJECUCIÓN</button>
-                <button onclick="confirmSecurity(false)" class="btn-deny">DENEGAR</button>
-            </div>
-        </div>
-    </div>
-
+            </div> <!-- End Slide 1 -->
+        </div> <!-- End Slides Track -->
+    </div> <!-- End Viewport -->
+    
+    <!-- GSAP (loaded before our module scripts) -->
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+    <!-- Navigation Logic -->
+    <script src="navigation.js"></script>
+    <!-- Cinematic Activation (ES Module) -->
+    <script type="module" src="animation/jarvisActivation.js"></script>
+    <!-- Loop Engineering Visualizer -->
+    <script src="loopVisualizer.js"></script>
+    <!-- Main Panel Logic -->
     <script src="script.js"></script>
 </body>
 </html>

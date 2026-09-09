@@ -17,15 +17,21 @@ from app.core.config import settings
 from app.core.logger import get_logger
 
 logger = get_logger("llm_service")
-from app.services.skill_service import get_llm_tools, load_skills
+from app.services.skill_service import get_tools_for_domain, load_skills
 
-# --- Client Pool (shared for both models via key rotation) ---
-api_keys = [k.strip() for k in settings.GROQ_API_KEYS.split(",") if k.strip()]
-if not api_keys:
-    raise ValueError("Debes proveer al menos una GROQ_API_KEYS en el .env")
+# --- Segregated Client Pools ---
+_fast_keys = settings.get_fast_keys()
+_reasoning_keys = settings.get_reasoning_keys()
 
-clients = [AsyncGroq(api_key=key) for key in api_keys]
-current_client_idx = 0
+if not _fast_keys and not _reasoning_keys:
+    raise ValueError("Debes proveer al menos una API Key de Groq en el .env")
+
+fast_clients = [AsyncGroq(api_key=k) for k in (_fast_keys or _reasoning_keys)]
+reasoning_clients = [AsyncGroq(api_key=k) for k in (_reasoning_keys or _fast_keys)]
+
+current_fast_idx = 0
+current_reasoning_idx = 0
+
 
 # ---------------------------------------------------------------------------
 # Tool Definitions (used exclusively by the Reasoning model)
@@ -154,63 +160,27 @@ tools = [
 # ---------------------------------------------------------------------------
 
 def _build_fast_system_prompt(client_os: str, username: str) -> str:
-    """Minimal system prompt for the fast OSS 20B model — personality only."""
+    """Compact system prompt for fast conversational stream (< 100 tokens)."""
     import datetime
-    now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    return f"""Eres JARVIS, el asistente de escritorio autónomo.
-Fecha y Hora actual: {now}
-OS del usuario: {client_os}
-Usuario: {username}
-
-ESTILO DE RESPUESTA:
-- Habla en primera persona con extrema formalidad.
-- Trata al usuario como 'señor'.
-- Sin emojis bajo ninguna circunstancia.
-- Respuestas breves, directas y al grano.
-- Si el usuario pregunta algo que no sabes o requiere acciones en el sistema, dile que estás procesando la solicitud."""
+    now = datetime.datetime.now().strftime('%H:%M')
+    return (
+        f"Eres JARVIS, el asistente de escritorio para {username} ({client_os}). Hora: {now}.\n"
+        "Estilo: Amigable, inteligente, conciso y natural. Sin emojis. Respuestas directas al grano."
+    )
 
 
 def _build_reasoning_system_prompt(client_os: str, client_caps: list, username: str, role: str) -> str:
-    """Full system prompt for the Reasoning Qwen model — tool calling enabled."""
+    """Compact system prompt for the Reasoning model (< 200 tokens)."""
     import datetime
-    now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    return f"""Eres JARVIS, el asistente de escritorio autónomo.
-Fecha y Hora actual: {now}
-Estás conectado al dispositivo del usuario con sistema operativo: {client_os}.
-Capacidades del cliente: {client_caps}.
-Identidad del usuario: {username}
-Nivel de acceso: {role.upper()}
-
-REGLA DE ORO ESTRICTA: ¡NO ERES UN CHATBOT DE AYUDA! Eres un asistente ejecutivo que DEBE usar sus herramientas integradas.
-NUNCA le des instrucciones paso a paso al usuario sobre cómo hacer algo. DEBES hacerlo TÚ MISMO invocando directamente la herramienta 'execute_command'.
-- Si el usuario dice "Abre chrome", usa la herramienta 'execute_command' con el comando: Start-Process chrome
-
-
-REGLA DE EJECUCIÓN (LÍMITE):
-- SOLO TIENES PERMITIDO ejecutar un máximo de UN (1) comando por cada petición del usuario. No lances múltiples comandos en ráfaga. Si tu comando falla, avísale al usuario y espera sus órdenes.
-- Usa los comandos nativos más simples que conozcas de PowerShell (ej. `taskmgr`, `Start-Process explorer.exe`, etc).
-
-REGLAS ANTI-ALUCINACIONES:
-- NUNCA simules ni inventes la salida de la terminal. TÚ envías el comando por la herramienta, y el SISTEMA te enviará la respuesta real. Está terminantemente prohibido que escribas etiquetas como <tool_response> en tus mensajes.
-- Si la herramienta falla, no inventes logs falsos.
-- Usa SIEMPRE el formato de invocación JSON nativo de OpenAI/Groq para las herramientas. NUNCA respondas con etiquetas <tool_call> ni XML.
-
-Si la tarea requiere múltiples pasos explícitos, usa SIEMPRE la herramienta 'create_plan'. Luego usa 'update_plan_step' para hacer seguimiento.
-
-IMPORTANTE PARA COMANDOS: Usa comandos simples de UNA SOLA LÍNEA (separa con ';' en PowerShell).
-Después de ejecutar exitosamente una herramienta, resume brevemente el resultado al usuario.
-
-ESTILO DE RESPUESTA:
-- Habla SIEMPRE en primera persona y con extrema formalidad y seriedad.
-- Trata al usuario como 'señor' (ej. "Un momento, señor, ando ejecutando el escaneo...").
-- ESTÁ ESTRICTAMENTE PROHIBIDO usar emojis (, , ️, , etc.) bajo CUALQUIER circunstancia.
-
-MEMORIA A LARGO PLAZO:
-- Si el usuario te menciona algún gusto, preferencia, nombre de alguien, dato personal, o hecho importante, DEBES invocar INMEDIATAMENTE la herramienta `save_memory` para que no se te olvide en el futuro.
-- Si el usuario te pregunta por algo del pasado, o hace referencia a algo que deberías saber sobre él, DEBES usar la herramienta `search_memory` ANTES de decirle que no sabes la respuesta.
-- Breve, directo y al grano.
-- Si debes dar mucha información, resume los puntos clave.
-- NUNCA te ofrezcas a "ayudar con la interpretación" o "indicar cómo hacerlo". Si te piden algo, EJECÚTALO mediante tus herramientas."""
+    now = datetime.datetime.now().strftime('%H:%M')
+    return (
+        f"Eres JARVIS, asistente ejecutivo para {username} en {client_os}. Hora: {now}.\n"
+        "REGLAS OBLIGATORIAS:\n"
+        "1. Usa las herramientas y skills disponibles para ejecutar las acciones pedidas.\n"
+        "2. NUNCA des instrucciones manuales si tienes una herramienta para ejecutarlo tú mismo.\n"
+        "3. Ejecuta solo las herramientas necesarias. Respuestas breves y al grano. Sin emojis.\n"
+        "4. No inventes logs falsos ni uses etiquetas XML. Usa formato JSON nativo de tool_calls."
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -218,10 +188,10 @@ MEMORIA A LARGO PLAZO:
 # ---------------------------------------------------------------------------
 
 def _build_clean_history(session_history: list) -> list:
-    """Strips unknown keys and normalizes tool call names."""
+    """Prunes history to the last 4 messages and limits message length to save TPM."""
     allowed_keys = {"role", "content", "name", "tool_call_id", "tool_calls"}
-    # Keep last 8 messages (4 interactions)
-    history = session_history[-8:]
+    # Keep only last 4 messages to stay well under TPM limits
+    history = session_history[-4:]
 
     clean = []
     for msg in history:
@@ -235,13 +205,10 @@ def _build_clean_history(session_history: list) -> list:
                 if tc.get("function", {}).get("name") == "execute_bash":
                     tc["function"]["name"] = "execute_command"
 
-        # Truncate excessively long tool outputs
+        # Truncate long tool outputs to 1500 chars (safe for TPM)
         if clean_msg.get("role") == "tool" and isinstance(clean_msg.get("content"), str):
-            if len(clean_msg["content"]) > 8000:
-                clean_msg["content"] = (
-                    clean_msg["content"][:8000]
-                    + "\n...[RESULTADO TRUNCADO. LÍMITE DE 8000 CARACTERES ALCANZADO PARA PROTEGER EL CONTEXTO]"
-                )
+            if len(clean_msg["content"]) > 1500:
+                clean_msg["content"] = clean_msg["content"][:1500] + "\n...[OUTPUT TRUNCADO POR SEGURIDAD]"
         clean.append(clean_msg)
 
     return clean
@@ -260,16 +227,21 @@ def _check_tool_loop(session_history: list) -> bool:
     return consecutive >= 4
 
 
-def _get_next_client():
-    """Round-robin client selector with rate-limit rotation."""
-    global current_client_idx
-    client = clients[current_client_idx]
-    return client
+def _get_next_fast_client():
+    global current_fast_idx
+    return fast_clients[current_fast_idx]
 
+def _rotate_fast_client():
+    global current_fast_idx
+    current_fast_idx = (current_fast_idx + 1) % len(fast_clients)
 
-def _rotate_client():
-    global current_client_idx
-    current_client_idx = (current_client_idx + 1) % len(clients)
+def _get_next_reasoning_client():
+    global current_reasoning_idx
+    return reasoning_clients[current_reasoning_idx]
+
+def _rotate_reasoning_client():
+    global current_reasoning_idx
+    current_reasoning_idx = (current_reasoning_idx + 1) % len(reasoning_clients)
 
 
 # ---------------------------------------------------------------------------
@@ -288,25 +260,14 @@ async def stream_fast_response(
     username: str,
 ) -> asyncio.Queue:
     """
-    Calls the fast OSS 20B model with stream=True.
+    Calls the fast model with stream=True.
     Pushes complete sentences into a Queue as they arrive.
-    Pushes None when done (sentinel).
-
-    Usage:
-        queue = await stream_fast_response(...)
-        while True:
-            sentence = await queue.get()
-            if sentence is None:
-                break
-            await websocket.send_text(SpeakResponse(message=sentence).model_dump_json())
     """
     queue: asyncio.Queue = asyncio.Queue()
 
     async def _producer():
-        global current_client_idx
         system_prompt = _build_fast_system_prompt(client_os, username)
         clean_history = _build_clean_history(session_history)
-        # Keep only user/assistant messages for the fast model
         fast_history = [
             m for m in clean_history
             if m.get("role") in ("user", "assistant") and isinstance(m.get("content"), str)
@@ -314,11 +275,11 @@ async def stream_fast_response(
         messages = [{"role": "system", "content": system_prompt}] + fast_history
 
         buffer = ""
-        for attempt in range(len(clients)):
-            client = _get_next_client()
+        for attempt in range(len(fast_clients)):
+            client = _get_next_fast_client()
             try:
                 stream = await client.chat.completions.create(
-                    model=settings.ROUTER_MODEL,
+                    model=settings.FAST_MODEL,
                     messages=messages,
                     max_tokens=512,
                     temperature=0.7,
@@ -327,7 +288,6 @@ async def stream_fast_response(
                 async for chunk in stream:
                     delta = chunk.choices[0].delta.content or ""
                     buffer += delta
-                    # Flush complete sentences to the queue
                     parts = re.split(r'(?<=[.!?…])\s+', buffer)
                     if len(parts) > 1:
                         for sentence in parts[:-1]:
@@ -335,18 +295,23 @@ async def stream_fast_response(
                                 await queue.put(sentence.strip())
                         buffer = parts[-1]
 
-                # Flush remainder
                 if buffer.strip():
                     await queue.put(buffer.strip())
-                break  # Success
+                break
 
-            except RateLimitError:
-                logger.warning(f"[FAST] Rate limit key {current_client_idx}. Rotando...")
-                _rotate_client()
-                buffer = ""
-                continue
+            except (RateLimitError, APIStatusError) as e:
+                status = getattr(e, 'status_code', 0)
+                if status in (413, 429) or isinstance(e, RateLimitError):
+                    logger.warning(f"[FAST] Cuota/Rate limit ({status}). Rotando key...")
+                    _rotate_fast_client()
+                    buffer = ""
+                    continue
+                else:
+                    logger.error(f"[FAST] Error en streaming: {e}")
+                    await queue.put("Disculpe señor, ocurrió un error procesando su solicitud.")
+                    break
             except Exception as e:
-                logger.error(f"[FAST] Error en streaming: {e}", exc_info=True)
+                logger.error(f"[FAST] Error inesperado en streaming: {e}", exc_info=True)
                 await queue.put("Disculpe señor, ocurrió un error procesando su solicitud.")
                 break
 
@@ -510,67 +475,56 @@ async def chat_reasoning(
     client_caps: list,
     username: str = "Invitado",
     role: str = "user",
+    domain: str = None,
 ) -> dict:
     """
-    Calls the heavy Qwen reasoning model with full tool schema.
-    Returns an action dict (speak | tool_call | server_tool | server_skill).
-    Uses stream=False for tool calls (needs the full JSON), stream=True for plain text responses.
+    Calls the Reasoning model with pruned domain tools to stay far below the 8000 TPM limit.
     """
-    global current_client_idx
-
     system_prompt = _build_reasoning_system_prompt(client_os, client_caps, username, role)
     clean_history = _build_clean_history(session_history)
 
     if _check_tool_loop(session_history):
-        system_prompt += "\n\n[SISTEMA INTERNO]: Has excedido el límite de herramientas consecutivas sin que el usuario hable. DEBES detenerte AHORA, no usar más herramientas y responder directamente al usuario con un resumen."
+        system_prompt += "\n\n[SISTEMA INTERNO]: Límite de herramientas consecutivas alcanzado. Detén el uso de herramientas y responde directamente al usuario."
 
+    # Skill Pruner: Select only tools relevant to the domain (reduces tokens by 80%)
+    active_tools = get_tools_for_domain(domain, tools)
     dynamic_skills = load_skills()
-    dynamic_llm_tools = get_llm_tools()
-    all_tools = tools + dynamic_llm_tools
 
     messages = [{"role": "system", "content": system_prompt}] + clean_history
 
-    for attempt in range(len(clients)):
-        groq_client = clients[current_client_idx]
+    for attempt in range(len(reasoning_clients)):
+        groq_client = _get_next_reasoning_client()
         try:
-            logger.info(f"[REASONING] Llamando a {settings.REASONING_MODEL}")
-            response = await groq_client.chat.completions.create(
-                model=settings.REASONING_MODEL,
-                messages=messages,
-                tools=all_tools,
-                tool_choice="auto",
-                max_tokens=4096,
-                stream=False,  # Must be False to reliably parse tool calls
-            )
+            logger.info(f"[REASONING] Llamando a {settings.REASONING_MODEL} (Dominio: {domain}, Herramientas: {len(active_tools)})")
+            call_kwargs = {
+                "model": settings.REASONING_MODEL,
+                "messages": messages,
+                "max_tokens": 1024,
+                "stream": False,
+            }
+            if active_tools:
+                call_kwargs["tools"] = active_tools
+                call_kwargs["tool_choice"] = "auto"
 
+            response = await groq_client.chat.completions.create(**call_kwargs)
             response_message = response.choices[0].message
             return parse_llm_response(response_message, dynamic_skills)
 
         except (RateLimitError, APIStatusError) as e:
-            if getattr(e, 'status_code', 0) == 429 or isinstance(e, RateLimitError):
-                logger.warning(f"Rate Limit key {current_client_idx}. Rotando...")
-                _rotate_client()
-                await asyncio.sleep(1)
+            status = getattr(e, 'status_code', 0)
+            if status in (413, 429) or isinstance(e, RateLimitError):
+                logger.warning(f"[REASONING] Cuota/Rate Limit ({status}) en key {current_reasoning_idx}. Rotando clave...")
+                _rotate_reasoning_client()
+                await asyncio.sleep(0.5)
                 continue
             else:
-                logger.error(f"Groq API Error {getattr(e, 'status_code', 'Unknown')}: {e}", exc_info=True)
-                error_str = str(e)
-                if "failed_generation" in error_str and "<tool_call>" in error_str:
-                    cmd_match = re.search(r"<parameter=command>\s*(.*?)(?:<|$)", error_str, re.DOTALL)
-                    if cmd_match:
-                        cmd = cmd_match.group(1).strip()
-                        return {
-                            "type": "tool_call",
-                            "tool": "execute_command",
-                            "command": cmd,
-                            "tool_call_id": "call_groq_rescue"
-                        }
-                return {"type": "speak", "message": f"Error {getattr(e, 'status_code', '400')}: {str(e)}"}
+                logger.error(f"[REASONING] Groq API Error {status}: {e}", exc_info=True)
+                return {"type": "speak", "message": f"Error del modelo {status}: {str(e)[:100]}"}
         except Exception as e:
-            logger.error(f"Excepción inesperada en Reasoning: {e}", exc_info=True)
-            return {"type": "speak", "message": f"Error inesperado en el modelo de razonamiento: {e}"}
+            logger.error(f"[REASONING] Excepción inesperada: {e}", exc_info=True)
+            return {"type": "speak", "message": f"Error inesperado en razonamiento: {str(e)[:100]}"}
 
-    return {"type": "speak", "message": "Error: Todos los clientes Groq han alcanzado su límite de velocidad."}
+    return {"type": "speak", "message": "Disculpe señor, todas las claves de razonamiento han alcanzado su límite de cuota temporal."}
 
 
 async def chat_with_jarvis(
@@ -579,10 +533,7 @@ async def chat_with_jarvis(
     client_caps: list,
     username: str = "Invitado",
     role: str = "user",
+    domain: str = None,
 ) -> dict:
-    """
-    Orchestrator — kept for backward compatibility with the scheduler/reminder system.
-    For the main WebSocket loop, use chat_reasoning() directly after the router classifies.
-    This function defaults to the reasoning model (tool-capable path).
-    """
-    return await chat_reasoning(session_history, client_os, client_caps, username, role)
+    """Default entry point for reasoning queries."""
+    return await chat_reasoning(session_history, client_os, client_caps, username, role, domain)

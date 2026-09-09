@@ -1,0 +1,306 @@
+/* ==========================================================================
+   JARVIS Activation Animation — animation.css
+   Styles for the cinematic boot sequence overlay.
+   All animated elements start hidden (opacity: 0) and are revealed by GSAP.
+   ========================================================================== */
+
+/* ─── Overlay ────────────────────────────────────────────────────────────── */
+#jarvis-activation-overlay {
+    position: absolute;
+    inset: 0;
+    background: #030811;
+    z-index: 9000;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none; /* Let GSAP handle everything */
+}
+
+/* ─── Signal Point ───────────────────────────────────────────────────────── */
+#act-signal-point {
+    position: absolute;
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: #00e5ff;
+    box-shadow: 0 0 12px 4px rgba(0, 229, 255, 0.8);
+    transform: translate(-50%, -50%);
+    left: 50%;
+    top: 50%;
+    opacity: 0;
+}
+
+/* ─── Scan Lines ─────────────────────────────────────────────────────────── */
+.act-scanline {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg,
+        transparent 0%,
+        rgba(0, 229, 255, 0.15) 20%,
+        rgba(0, 229, 255, 0.4) 50%,
+        rgba(0, 229, 255, 0.15) 80%,
+        transparent 100%
+    );
+    opacity: 0;
+}
+
+/* ─── HUD Corner Brackets ────────────────────────────────────────────────── */
+.act-corner {
+    position: absolute;
+    width: 60px;
+    height: 60px;
+    opacity: 0;
+}
+.act-corner svg {
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+}
+.act-corner path {
+    fill: none;
+    stroke: #00e5ff;
+    stroke-width: 1.5;
+    stroke-dasharray: 200;
+    stroke-dashoffset: 200;
+    filter: drop-shadow(0 0 3px rgba(0, 229, 255, 0.7));
+}
+.act-corner.tl { top: 30px;    left: 30px;    }
+.act-corner.tr { top: 30px;    right: 30px;   }
+.act-corner.bl { bottom: 30px; left: 30px;    }
+.act-corner.br { bottom: 30px; right: 30px;   }
+
+/* ─── HUD Horizontal Lines ───────────────────────────────────────────────── */
+.act-hline {
+    position: absolute;
+    height: 1px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: linear-gradient(90deg,
+        transparent,
+        rgba(0, 229, 255, 0.6) 30%,
+        rgba(0, 229, 255, 0.6) 70%,
+        transparent
+    );
+    opacity: 0;
+    width: 0;
+}
+
+/* ─── HUD Side Panels ────────────────────────────────────────────────────── */
+.act-side-panel {
+    position: absolute;
+    width: 180px;
+    border: 1px solid rgba(0, 229, 255, 0.2);
+    background: rgba(0, 229, 255, 0.03);
+    padding: 10px 12px;
+    opacity: 0;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    color: rgba(0, 229, 255, 0.7);
+    line-height: 1.8;
+    clip-path: inset(0 100% 0 0); /* Revealed by GSAP */
+}
+.act-side-panel.left  { left: 40px;  top: 50%; transform: translateY(-50%); }
+.act-side-panel.right { right: 40px; top: 50%; transform: translateY(-50%); }
+.act-side-panel .sp-header {
+    color: rgba(0, 229, 255, 0.9);
+    border-bottom: 1px solid rgba(0, 229, 255, 0.2);
+    margin-bottom: 6px;
+    padding-bottom: 4px;
+    letter-spacing: 1px;
+    font-size: 9px;
+}
+.act-side-panel .sp-row { display: flex; justify-content: space-between; }
+.act-side-panel .sp-val { color: #00e5ff; }
+
+/* ─── HUD Grid Nodes ─────────────────────────────────────────────────────── */
+.act-node {
+    position: absolute;
+    width: 5px;
+    height: 5px;
+    background: transparent;
+    border: 1px solid rgba(0, 229, 255, 0.5);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    opacity: 0;
+}
+.act-node::after {
+    content: '';
+    position: absolute;
+    inset: -3px;
+    border-radius: 50%;
+    border: 1px solid transparent;
+}
+.act-node.active {
+    background: rgba(0, 229, 255, 0.4);
+    box-shadow: 0 0 6px rgba(0, 229, 255, 0.8);
+}
+
+/* ─── Connector Lines (SVG overlay) ─────────────────────────────────────── */
+#act-connectors-svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    opacity: 0;
+}
+#act-connectors-svg line,
+#act-connectors-svg path {
+    stroke: rgba(0, 229, 255, 0.25);
+    stroke-width: 0.8;
+    stroke-dasharray: 4 4;
+    fill: none;
+}
+
+/* ─── Coordinates Display ────────────────────────────────────────────────── */
+.act-coords {
+    position: absolute;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 9px;
+    color: rgba(0, 229, 255, 0.45);
+    letter-spacing: 1px;
+    opacity: 0;
+}
+.act-coords.bottom-left  { bottom: 40px; left: 40px;  }
+.act-coords.bottom-right { bottom: 40px; right: 40px; text-align: right; }
+.act-coords.top-center   { top: 40px;    left: 50%;   transform: translateX(-50%); text-align: center; }
+
+/* ─── Central Core Container ─────────────────────────────────────────────── */
+#act-central-core {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 280px;
+    height: 280px;
+}
+
+/* Outer ring arcs */
+.act-outer-arc {
+    fill: none;
+    stroke: rgba(0, 229, 255, 0.6);
+    stroke-width: 1.5;
+    stroke-dasharray: 200;
+    stroke-dashoffset: 200;
+    filter: drop-shadow(0 0 4px rgba(0, 229, 255, 0.5));
+}
+
+/* Middle ring */
+.act-mid-ring {
+    fill: none;
+    stroke: rgba(0, 229, 255, 0.35);
+    stroke-width: 1;
+    stroke-dasharray: 3 6;
+}
+
+/* Inner ring */
+.act-inner-ring {
+    fill: none;
+    stroke: rgba(0, 229, 255, 0.5);
+    stroke-width: 1;
+}
+
+/* Neural web paths */
+.act-neural-path {
+    fill: none;
+    stroke: rgba(0, 229, 255, 0.25);
+    stroke-width: 0.8;
+    stroke-dasharray: 300;
+    stroke-dashoffset: 300;
+}
+
+/* Hex core */
+.act-hex-core {
+    fill: rgba(0, 229, 255, 0.05);
+    stroke: rgba(0, 229, 255, 0.7);
+    stroke-width: 1.2;
+    filter: drop-shadow(0 0 8px rgba(0, 229, 255, 0.6));
+}
+
+/* Center pulse */
+.act-center-pulse {
+    fill: rgba(0, 229, 255, 0.15);
+}
+.act-center-core-dot {
+    fill: #00e5ff;
+    filter: drop-shadow(0 0 6px #00e5ff);
+}
+
+/* Orbital nodes */
+.act-orbital-node {
+    fill: transparent;
+    stroke: rgba(0, 229, 255, 0.8);
+    stroke-width: 1;
+    opacity: 0;
+}
+.act-orbital-node.lit {
+    fill: rgba(0, 229, 255, 0.5);
+    filter: drop-shadow(0 0 4px rgba(0, 229, 255, 0.9));
+}
+
+/* Segment markers */
+.act-segment-mark {
+    fill: none;
+    stroke: rgba(0, 229, 255, 0.8);
+    stroke-width: 2;
+    opacity: 0;
+}
+
+/* ─── Particles ──────────────────────────────────────────────────────────── */
+.act-particle {
+    position: absolute;
+    width: 2px;
+    height: 2px;
+    border-radius: 50%;
+    background: #00e5ff;
+    opacity: 0;
+    pointer-events: none;
+    box-shadow: 0 0 4px rgba(0, 229, 255, 0.8);
+}
+
+/* ─── Activation Pulse Ring ──────────────────────────────────────────────── */
+.act-pulse-ring {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    border: 1px solid rgba(0, 229, 255, 0.6);
+    opacity: 0;
+    pointer-events: none;
+}
+
+/* ─── READY state: idle breathing on the core ────────────────────────────── */
+@keyframes act-core-breathe {
+    0%, 100% { opacity: 0.8; filter: drop-shadow(0 0 6px rgba(0, 229, 255, 0.5)); }
+    50%       { opacity: 1.0; filter: drop-shadow(0 0 14px rgba(0, 229, 255, 0.9)); }
+}
+.act-core-ready .act-hex-core {
+    animation: act-core-breathe 3s ease-in-out infinite;
+}
+@keyframes act-mid-rotate {
+    from { transform: rotate(0deg);   }
+    to   { transform: rotate(360deg); }
+}
+.act-core-ready #act-mid-ring-group {
+    transform-origin: 140px 140px;
+    animation: act-mid-rotate 20s linear infinite;
+}
+
+/* ─── JARVIS ONLINE text flash ───────────────────────────────────────────── */
+#act-online-text {
+    position: absolute;
+    bottom: 55px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 6px;
+    color: #00e5ff;
+    opacity: 0;
+    white-space: nowrap;
+    text-shadow: 0 0 10px rgba(0, 229, 255, 0.8);
+}

@@ -1,0 +1,21 @@
+{
+  "name": "window_manager",
+  "description": "Control de ventanas del escritorio: listar ventanas activas, enfocar/traer al frente, minimizar, maximizar o cerrar.",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "action": {
+        "type": "string",
+        "enum": ["list", "focus", "minimize", "maximize", "close"],
+        "description": "Acción a realizar sobre la ventana o el escritorio."
+      },
+      "title": {
+        "type": "string",
+        "description": "Nombre o parte del título de la ventana (ej. 'Chrome', 'Notepad', 'Visual Studio Code'). Obligatorio para focus, minimize, maximize y close."
+      }
+    },
+    "required": ["action"]
+  },
+  "executable": "main.py",
+  "language": "python"
+}

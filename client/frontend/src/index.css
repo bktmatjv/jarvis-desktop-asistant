@@ -1,0 +1,22 @@
+:root {
+  color-scheme: light dark;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: transparent !important;
+}
+
+#root {
+  width: 100vw;
+  height: 100vh;
+  margin: 0;
+  padding: 0;
+  background-color: transparent !important;
+  -webkit-app-region: drag; /* Permite arrastrar la ventana en pywebview */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+}

@@ -1,0 +1,186 @@
+/* ==========================================================================
+   JARVIS UI v2.5 - CSS Grid Sci-Fi Theme (Migrado a React)
+   ========================================================================== */
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+
+:root {
+    --jarvis-cyan: #00e5ff;
+    --jarvis-cyan-dim: rgba(0, 229, 255, 0.2);
+    --jarvis-bg: #030811;
+    --jarvis-panel-bg: rgba(4, 15, 30, 0.8);
+    --jarvis-glow: 0 0 10px rgba(0, 229, 255, 0.5);
+    
+    --jarvis-red: #ff3333;
+    --jarvis-red-dim: rgba(255, 51, 51, 0.2);
+    --jarvis-red-glow: 0 0 10px rgba(255, 51, 51, 0.5);
+    
+    --jarvis-green: #00ff66;
+    --jarvis-orange: #ffaa00;
+
+    --font-main: 'Share Tech Mono', monospace;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background-color: var(--jarvis-bg);
+    color: var(--jarvis-cyan);
+    font-family: var(--font-main);
+    overflow: hidden;
+    user-select: none;
+    font-size: 14px;
+}
+
+body.orb-mode,
+html.orb-mode {
+    background-color: transparent !important;
+    background: transparent !important;
+}
+
+body.orb-mode canvas {
+    background: transparent !important;
+    background-color: transparent !important;
+}
+
+
+/* Base CRT */
+.crt-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+    background-size: 100% 4px, 6px 100%;
+    pointer-events: none;
+    z-index: 9999;
+}
+
+.app-container {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    padding: 10px 20px;
+    transition: opacity 1s ease;
+    overflow: hidden;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--jarvis-cyan-dim);
+    padding-bottom: 10px;
+    margin-bottom: 15px;
+}
+
+.logo-area { display: flex; align-items: center; gap: 15px; }
+.logo-title { font-size: 32px; font-weight: bold; text-shadow: var(--jarvis-glow); letter-spacing: 2px; }
+.logo-subtitle { font-size: 10px; opacity: 0.7; line-height: 1.2; }
+.header-icons { display: flex; gap: 15px; align-items: center; }
+.icon-btn { opacity: 0.3; cursor: pointer; transition: all 0.3s ease; }
+.icon-btn:hover { opacity: 0.8; }
+.icon-btn.active { opacity: 1; text-shadow: var(--jarvis-glow); color: #fff; }
+
+.main-grid {
+    display: grid;
+    grid-template-columns: 280px 1fr 320px;
+    gap: 15px;
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding-bottom: 15px;
+    z-index: 10; /* Above aurora */
+}
+
+.col-left, .col-center, .col-right {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    min-height: 0;
+}
+
+.panel {
+    background: var(--jarvis-panel-bg);
+    border: 1px solid var(--jarvis-cyan-dim);
+    border-radius: 4px;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    box-shadow: inset 0 0 20px rgba(0, 229, 255, 0.05);
+}
+
+.panel-header {
+    background: rgba(0, 229, 255, 0.05);
+    border-bottom: 1px solid var(--jarvis-cyan-dim);
+    padding: 6px 12px;
+    font-size: 12px;
+    letter-spacing: 1px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* Modals & Dashboard Overlay */
+.bottom-modals {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    right: 20px;
+    z-index: 100;
+}
+
+.admin-panel {
+    background: var(--jarvis-bg);
+    border: 1px solid var(--jarvis-cyan);
+    padding: 15px;
+    box-shadow: 0 0 30px rgba(0, 229, 255, 0.2);
+}
+
+.btn-solid { background: var(--jarvis-cyan); color: #000; border: none; padding: 5px 10px; cursor: pointer; font-family: inherit; }
+.btn-outline { background: transparent; border: 1px solid var(--jarvis-cyan); color: var(--jarvis-cyan); padding: 4px 8px; cursor: pointer; font-family: inherit; font-size: 10px; }
+.btn-outline:hover { background: var(--jarvis-cyan); color: #000; box-shadow: var(--jarvis-glow); }
+
+.green { color: var(--jarvis-green); }
+.cyan { color: var(--jarvis-cyan); }
+.red { color: var(--jarvis-red); }
+
+/* Utilities */
+.hotkey-input {
+    background: rgba(0,229,255,0.1);
+    border: 1px solid var(--jarvis-cyan);
+    color: white;
+    font-family: monospace;
+    padding: 5px;
+    width: 100%;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-size: 11px;
+}
+
+.admin-content {
+    display: flex;
+    gap: 20px;
+}
+.admin-stat-box {
+    flex: 1;
+    border: 1px solid rgba(0,229,255,0.3);
+    padding: 10px;
+    text-align: center;
+}
+.admin-stat-box .label { font-size: 10px; opacity: 0.6; }
+.admin-stat-box .val { font-size: 24px; font-weight: bold; margin-top: 10px; }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--jarvis-cyan-dim); border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: var(--jarvis-cyan); }
