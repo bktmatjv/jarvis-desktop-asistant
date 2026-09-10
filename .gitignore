@@ -44,8 +44,17 @@ Thumbs.db
 node_modules/
 package-lock.json
 
-# Caches de Groq / APIs
-.cache/
+# Caches de APIs (tokens de Spotify, etc.)
+.cache*
 
 client/model/
 client/memory/*.json
+
+# Node (frontend React/Vite — el bundle compilado /dist SI se versiona)
+node_modules/
+package-lock.json
+client/frontend/node_modules/
+
+# Excepción: se incluye el build de producción pre-compilado del Orbe 3D
+# para que cualquier usuario pueda ejecutar JARVIS sin necesitar Node.js
+!client/frontend/dist/**

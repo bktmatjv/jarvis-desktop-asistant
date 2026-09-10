@@ -1,0 +1,25 @@
+{
+  "name": "system_control",
+  "description": "Control del sistema operativo: abrir programas y aplicaciones instaladas, ajustar el volumen general (0 a 100) y gestionar energía (apagar, reiniciar, suspender, bloquear pantalla).",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "action": {
+        "type": "string",
+        "enum": ["open_program", "set_volume", "shutdown", "restart", "sleep", "lock"],
+        "description": "Acción a ejecutar en el sistema operativo."
+      },
+      "program": {
+        "type": "string",
+        "description": "Nombre de la aplicación o programa a abrir (ej. 'chrome', 'spotify', 'bloc de notas', 'calculadora', 'code'). Requerido si action='open_program'."
+      },
+      "volume_level": {
+        "type": "integer",
+        "description": "Nivel de volumen en porcentaje entre 0 y 100. Requerido si action='set_volume'."
+      }
+    },
+    "required": ["action"]
+  },
+  "executable": "main.py",
+  "language": "python"
+}

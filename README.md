@@ -1,92 +1,129 @@
 # JARVIS: Asistente de Escritorio Autónomo
 
-JARVIS es un sistema de Asistencia e Inteligencia Artificial de grado AGI, diseñado con una arquitectura robusta de **Cliente-Servidor (Backend)** y capacidades autónomas. Puede controlar tu entorno de escritorio, agendar tareas por su cuenta, interactuar auditivamente mediante reconocimiento de voz offline (Wake Word) y proveer automatización a nivel de sistema tanto en Linux como en Windows.
+JARVIS es un sistema de asistencia e inteligencia artificial de escritorio con una arquitectura robusta **Cliente-Servidor** y capacidades autónomas avanzadas. Puede controlar tu entorno de escritorio, agendar tareas de forma proactiva, interactuar mediante reconocimiento de voz offline (Wake Word) y proveer automatización a nivel de sistema tanto en Windows como en Linux.
 
 ---
 
 ## Features Principales
 
-### Autonomía Proactiva y Calendarización Asíncrona
-El núcleo del asistente incorpora un motor de tareas en segundo plano basado en `APScheduler`. Esto le otorga al LLM la capacidad de invocar llamadas a herramientas (Tool Calls) del lado del servidor para programar eventos en el futuro. Cuando el temporizador expira, el backend inicia una comunicación WebSocket (Push Event) hacia el cliente para notificar al usuario de forma autónoma.
+### Loop Engineering — Arquitectura Dual-Model
+El corazón del sistema utiliza dos modelos LLM especializados trabajando en tándem:
+- **Fast Router (`openai/gpt-oss-20b`)**: Clasifica la intención del usuario en menos de 300ms y genera una *frase de stalling* humana e inmediata mientras el razonamiento trabaja en background. Minimiza la latencia percibida.
+- **Reasoning Model (`qwen/qwen3.6-27b`)**: Modelo de razonamiento complejo que ejecuta el Tool Calling (skills, comandos de terminal) y devuelve respuestas elaboradas.
 
-### Compatibilidad Multiplataforma (Windows y Linux)
-El sistema cliente detecta automáticamente el Sistema Operativo subyacente y utiliza las herramientas OS-Level correspondientes:
-- Interactúa con APIs de Windows o gestores de Linux de forma transparente.
-- Control avanzado de ventanas, multimedia y explorador de archivos.
+El HUD Panel muestra en tiempo real cada paso del pipeline: Ingestion → Router → Context Pruner → Reasoning → Skill Runner → Synthesizer.
 
-### Reconocimiento de Voz Offline e Interacción Natural
-El cliente cuenta con un motor STT (Speech-to-Text) y un "Wake Word" engine impulsado por **Vosk**. JARVIS escucha de fondo sin necesidad de conexión a internet para esta fase, despertando únicamente cuando lo nombras, ahorrando recursos computacionales y protegiendo la privacidad.
+### Sistema de Skills Modulares
+Las capacidades de acción están empaquetadas como Skills independientes (archivos `main.py` + `skill.json`), cargadas dinámicamente por el backend. El motor filtra por dominio para no saturar el contexto del LLM:
+- **`system_control`** — Abrir programas, ajustar volumen, apagar/reiniciar/bloquear
+- **`window_manager`** — Listar, enfocar, minimizar, maximizar y cerrar ventanas
+- **`system_telemetry`** — CPU, RAM, batería, procesos activos y capturas de pantalla
+- **`input_controller`** — Simular teclado, atajos y movimiento/clic de mouse
+- **`media_control`** — Control de reproducción multimedia (play/pause, siguiente, anterior)
+- **`play_ytmusic`** — Buscar y reproducir canciones en YouTube Music
+- **`web_search`** / **`web_fetch`** — Búsqueda y lectura de contenido web en tiempo real
 
-### Ejecución de Comandos a Nivel de Sistema (REPL)
-El cliente local actúa como un puente de hardware y software, permitiendo la ejecución de comandos. Mediante subprocesos administrados por `asyncio`, el agente puede:
-- Modificar el sistema de archivos.
-- Iniciar aplicaciones de interfaz gráfica o herramientas CLI.
-- Monitorear en tiempo real métricas vitales (uso de CPU y memoria RAM).
-
-### Arquitectura de Redundancia y Manejo de Rate Limits
-Para garantizar la operación continua sin interrupciones por límites de cuota, la capa de integración LLM acepta múltiples API Keys (ej. Groq). Ante una respuesta de limitación HTTP 429, el servicio rota automáticamente al siguiente cliente disponible.
-
-### Interceptor de Seguridad de Ejecución
-Como salvaguarda ante operaciones destructivas generadas por el LLM, el cliente evalúa todos los comandos del sistema contra una lista heurística de operaciones de alto riesgo (ej. `rm -rf`, `chmod`, formateos). Si se detecta una coincidencia, el hilo de ejecución se pausa y renderiza un modal en el HUD solicitando autorización explícita humana.
-
----
-
-## Interfaz de Usuario (HUD)
-
-El cliente de escritorio cuenta con un Head-Up Display (HUD) estilo holográfico que te muestra en tiempo real las acciones que JARVIS ejecuta en tu máquina.
+### Interfaz de Usuario Dual (HUD)
+El cliente ejecuta **dos ventanas simultáneas** gestionadas por PyWebView:
+1. **Panel de Control** (`client/web/`) — HUD holográfico de escritorio completo con chat, telemetría, consola de procesos y visualizador del Loop Engineering en tiempo real.
+2. **Orbe Flotante** (`client/frontend/`) — Esfera 3D translúcida y animada (React + Three.js) que flota sobre el escritorio y reacciona visualmente al estado del sistema (dormido, activo, escuchando).
 
 ![HUD Captura 1](client/img/cap1.png)
-*El cliente listo para recibir órdenes, monitoreando el estado vital de la PC.*
+*El Panel de Control con telemetría en tiempo real y chat activo.*
 
 ![HUD Captura 2](client/img/cap2.png)
-*Visualización de respuestas, notificaciones proactivas y comandos del sistema.*
+*El visualizador de Loop Engineering muestra cada etapa del pipeline de IA.*
+
+### Reconocimiento de Voz Offline (Wake Word)
+El cliente incorpora un motor Wake Word impulsado por **Vosk** que escucha constantemente en background sin conexión a internet. Al detectar "Jarvis", activa el flujo de grabación con **Groq Whisper** para transcribir el comando con alta precisión.
+
+### Autonomía Proactiva (APScheduler)
+El backend puede programar eventos en el futuro mediante APScheduler. Al expirar el temporizador, el servidor envía un Push Event vía WebSocket directamente al HUD del usuario sin intervención manual.
+
+### Interceptor de Seguridad
+Antes de ejecutar comandos de terminal potencialmente peligrosos (`rm -rf`, `chmod`, etc.), el sistema pausa el flujo y muestra un modal de confirmación en el HUD solicitando autorización explícita.
+
+### Arquitectura de Alta Disponibilidad (Anti Rate-Limit)
+Acepta múltiples API Keys de Groq segregadas por rol (`GROQ_API_KEYS_VOICE`, `GROQ_API_KEYS_FAST`, `GROQ_API_KEYS_REASONING`). Ante un error HTTP 429, rota automáticamente al siguiente cliente disponible sin interrumpir la conversación.
 
 ---
 
 ## Arquitectura del Sistema
 
-El sistema está dividido estrictamente en dos partes para garantizar máxima seguridad y escalabilidad:
+```
+┌─────────────────────────────────────────────────────┐
+│                  JARVIS SYSTEM                      │
+│                                                     │
+│  ┌─────────────┐         ┌───────────────────────┐  │
+│  │   CLIENT    │◄───WS──►│       BACKEND         │  │
+│  │ (PyWebView) │         │     (FastAPI)         │  │
+│  │             │         │                       │  │
+│  │ • Wake Word │         │ • Intent Router       │  │
+│  │ • STT/TTS   │         │ • Reasoning Model     │  │
+│  │ • HUD Panel │         │ • Skill Service       │  │
+│  │ • Orb 3D    │         │ • Memory (MongoDB)    │  │
+│  │ • Skills    │         │ • Scheduler           │  │
+│  └─────────────┘         └───────────────────────┘  │
+└─────────────────────────────────────────────────────┘
+```
 
-1. **Backend**: Un servidor FastAPI que maneja la memoria, el LLM, el enrutamiento de peticiones (router_service), control de habilidades remotas (skill_service) y la rotación de API Keys. 
-2. **Client**: Una aplicación de Python (PyWebView + HTML/JS/CSS) que reside en la estación de trabajo local, controla los sensores de voz y ejecuta las herramientas locales delegadas por el Backend.
-
-Para mayor profundidad sobre la separación de herramientas OS y los nuevos servicios inyectados, referirse al documento: [DOCUMENTATION.md](DOCUMENTATION.md)
+El Backend (cerebro) está separado del Cliente (cuerpo) para garantizar seguridad y escalabilidad. Ver [DOCUMENTATION.md](DOCUMENTATION.md) para la arquitectura técnica detallada y [DATABASE_DESIGN.md](DATABASE_DESIGN.md) para el diseño de datos y modelo multidispositivo.
 
 ---
 
 ## Instalación y Despliegue
 
+### Requisitos
+- Python 3.10+
+- Node.js 18+ *(solo si quieres modificar el Orbe 3D — el bundle compilado viene incluido)*
+- Cuenta en [Groq Cloud](https://console.groq.com) con al menos una API Key
+- URI de conexión a MongoDB Atlas
+
 ### 1. Variables de Entorno
-Copia el archivo de ejemplo y complétalo:
 ```bash
 cp .env.example .env
 ```
-Añade tus API Keys de Groq (separadas por coma) y tu URI de conexión a MongoDB.
-
-### 2. Preparar el Modelo de Voz Local
-Descarga los modelos requeridos para el reconocimiento offline de Vosk en el cliente.
-```bash
-cd client
-python download_model.py
+Edita `.env` con tus credenciales:
+```ini
+GROQ_API_KEYS_VOICE=gsk_...
+GROQ_API_KEYS_FAST=gsk_...
+GROQ_API_KEYS_REASONING=gsk_...
+MONGO_URI=mongodb+srv://user:password@cluster...
+USER_NAME=TU NOMBRE
+USER_ROLE=admin
 ```
 
-### 3. Iniciar el Backend
-En una terminal (con entorno virtual):
+### 2. Instalación Automática (Windows — Recomendado)
+Ejecuta este archivo una sola vez para configurar todo el entorno:
+```
+setup_env.bat
+```
+Esto creará el virtualenv, instalará todas las dependencias de backend y cliente, y descargará el modelo de Vosk.
+
+### 3. Iniciar JARVIS
+```
+start_jarvis.bat
+```
+El launcher inicia el servidor FastAPI en background, espera a que esté disponible y luego lanza el cliente HUD.
+
+Presiona `Ctrl + Espacio` para el Orbe 3D, y `Ctrl + ↑` para el Panel de Control.
+
+### Instalación Manual (Linux / avanzado)
+
+**Backend:**
 ```bash
 cd backend
 pip install -r requirements.txt
 uvicorn app.main:app --reload
 ```
 
-### 4. Iniciar el Cliente HUD
-En otra terminal diferente:
+**Cliente:**
 ```bash
 cd client
 pip install -r requirements.txt
+python download_model.py   # Solo la primera vez
 python main.py
 ```
-
-Presiona `Ctrl + Espacio` en cualquier momento en tu escritorio para invocar el HUD holográfico.
 
 ---
 
@@ -94,6 +131,7 @@ Presiona `Ctrl + Espacio` en cualquier momento en tu escritorio para invocar el 
 
 | Versión | Fecha | Descripción |
 | :--- | :--- | :--- |
-| **v2.1.0** | Agosto 2026 | Arquitectura OS-Agnostic con herramientas para Windows/Linux. Integración de motores locales Vosk para Wake Word y STT. UI purgada de emojis para un enfoque más sobrio. |
+| **v2.5.0** | Septiembre 2026 | Loop Engineering con Dual-Model (Router + Reasoning). Visualizador de pipeline en HUD. Orbe 3D con Three.js/React. Sistema de Skills modular con pruning de contexto por dominio. Instalación en 1 clic con `.bat`. |
+| **v2.1.0** | Agosto 2026 | Arquitectura OS-Agnostic con herramientas para Windows/Linux. Integración de motores locales Vosk para Wake Word y STT. |
 | **v2.0.0** | Agosto 2026 | Refactorización masiva a arquitectura Cliente-Servidor (FastAPI + PyWebview). Incorporación de Autonomía proactiva. |
 | **v1.5.0** | Julio 2026 | Mejoras en el HUD Holográfico con Vanilla CSS. |

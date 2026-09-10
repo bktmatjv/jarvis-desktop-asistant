@@ -34,13 +34,15 @@ class JarvisConnection:
                     self.websocket = ws
                     print(" Conectado al servidor JARVIS.")
                     
+                    username = os.getenv("USER_NAME", "MATIAS JAVIER")
+                    role = os.getenv("USER_ROLE", "admin")
                     handshake = {
                         "type": "handshake",
                         "client_id": "hud_desktop",
                         "os": platform.system().lower(),
-                        "capabilities": ["terminal_repl", "ui_render", "audio_record"],
-                        "username": "MATIAS JAVIER",
-                        "role": "admin",
+                        "capabilities": ["terminal_repl", "ui_render", "audio_record", "skills_executor"],
+                        "username": username,
+                        "role": role,
                         "device_name": platform.node()
                     }
                     await self.websocket.send(json.dumps(handshake))

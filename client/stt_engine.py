@@ -1,7 +1,5 @@
 import os
 import io
-import wave
-import tempfile
 import speech_recognition as sr
 from groq import Groq
 from dotenv import load_dotenv
@@ -10,19 +8,33 @@ from dotenv import load_dotenv
 dotenv_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), '.env')
 load_dotenv(dotenv_path)
 
-api_key = os.getenv("GROQ_API_KEY")
-if not api_key:
-    print(" Error: GROQ_API_KEY no encontrada en .env")
+# Cargar claves dedicadas para reconocimiento de voz
+voice_keys_str = os.getenv("GROQ_API_KEYS_VOICE") or os.getenv("GROQ_API_KEY") or os.getenv("GROQ_API_KEYS") or ""
+api_keys = [k.strip() for k in voice_keys_str.split(",") if k.strip()]
 
-# Cliente de Groq para acceder a Whisper
-client = Groq(api_key=api_key)
+if not api_keys:
+    print(" Error: No se encontró GROQ_API_KEYS_VOICE ni GROQ_API_KEY en .env")
+
+clients = [Groq(api_key=k) for k in api_keys] if api_keys else []
+current_voice_idx = 0
+
+def _get_voice_client():
+    global current_voice_idx
+    if not clients:
+        return None
+    return clients[current_voice_idx]
+
+def _rotate_voice_client():
+    global current_voice_idx
+    if clients:
+        current_voice_idx = (current_voice_idx + 1) % len(clients)
 
 # Motor de reconocimiento para manejar el micrófono y silencios
 recognizer = sr.Recognizer()
-
-# Configuraciones de umbral de energía (se ajustan al ruido ambiente)
 recognizer.energy_threshold = 300 
 recognizer.dynamic_energy_threshold = True
+recognizer.pause_threshold = 0.5
+
 
 def record_and_transcribe(on_listening_start=None):
     """
@@ -30,7 +42,7 @@ def record_and_transcribe(on_listening_start=None):
     luego envía el audio a Groq Whisper y devuelve el texto.
     """
     with sr.Microphone() as source:
-        # Ajusta el ruido ambiente por medio segundo antes de grabar
+        # Ajusta el ruido ambiente por medio segundo antes de grabar (evita falsos positivos y ahorra API calls)
         recognizer.adjust_for_ambient_noise(source, duration=0.5)
         
         if on_listening_start:
@@ -47,32 +59,30 @@ def record_and_transcribe(on_listening_start=None):
 
     print("️ [STT] Enviando audio a Groq Whisper...")
     
-    # Escribir a un archivo temporal WAV porque Groq pide un archivo físico
-    with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp_file:
-        tmp_filename = tmp_file.name
-        with open(tmp_filename, "wb") as f:
-            f.write(audio.get_wav_data())
+    # Mantener el audio en memoria RAM, evitando I/O de disco
+    audio_data = audio.get_wav_data()
 
-    try:
-        with open(tmp_filename, "rb") as file:
-            transcription = client.audio.transcriptions.create(
-              file=(tmp_filename, file.read()),
-              model="whisper-large-v3",
-              prompt="El audio es en idioma español.",  # Ayuda a que el modelo sepa el idioma por defecto
-              response_format="json",
-              language="es",
-              temperature=0.0
+    model_name = os.getenv("VOICE_MODEL", "whisper-large-v3-turbo")
+
+    for _ in range(max(1, len(clients))):
+        cli = _get_voice_client()
+        if not cli:
+            print(" Error: No hay cliente Groq disponible para STT.")
+            return None
+        try:
+            transcription = cli.audio.transcriptions.create(
+                file=("audio.wav", audio_data),
+                model=model_name,
+                prompt="El audio es en idioma español.",
+                response_format="json",
+                language="es",
+                temperature=0.0
             )
-        
-        # Limpiar archivo temporal
-        os.remove(tmp_filename)
-        
-        texto = transcription.text.strip()
-        print(f" [STT] Transcrito: '{texto}'")
-        return texto
+            texto = transcription.text.strip()
+            print(f" [STT] Transcrito: '{texto}'")
+            return texto
+        except Exception as e:
+            print(f" [STT] Error en transcripción con clave actual ({e}). Rotando...")
+            _rotate_voice_client()
 
-    except Exception as e:
-        print(f" [STT] Error transcribiendo con Groq: {e}")
-        if os.path.exists(tmp_filename):
-            os.remove(tmp_filename)
-        return None
+    return None

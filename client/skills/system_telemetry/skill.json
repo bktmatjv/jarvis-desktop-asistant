@@ -1,0 +1,21 @@
+{
+  "name": "system_telemetry",
+  "description": "Telemetría y sensores del sistema: consultar uso de CPU y memoria RAM, nivel de batería, procesos con mayor consumo de recursos, hora actual o tomar una captura de pantalla.",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "metric": {
+        "type": "string",
+        "enum": ["all_metrics", "cpu_ram", "battery", "top_processes", "screenshot", "system_time"],
+        "description": "Métrica o acción de telemetría a consultar."
+      },
+      "screenshot_path": {
+        "type": "string",
+        "description": "Ruta o nombre de archivo donde guardar la captura de pantalla si metric='screenshot'. Opcional."
+      }
+    },
+    "required": ["metric"]
+  },
+  "executable": "main.py",
+  "language": "python"
+}

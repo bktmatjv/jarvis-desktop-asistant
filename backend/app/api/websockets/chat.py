@@ -17,6 +17,7 @@ from app.models.schemas import (
     ToolCallResponse, SpeakResponse, ThinkingResponse,
     TaskPlanResponse, TaskUpdateResponse
 )
+from app.core.config import settings
 from app.services.memory_service import add_message, get_recent_history, save_memory, search_memory
 from app.services.llm_service import chat_reasoning, stream_fast_response
 from app.services.router_service import classify_intent
@@ -100,12 +101,18 @@ async def chat_endpoint(websocket: WebSocket):
                     print(f" User: {msg_obj.content}")
 
                     await add_message(session_id, {"role": "user", "content": msg_obj.content})
-                    await process_message(websocket, session_id, client_os, client_caps, username, role)
+                    try:
+                        await process_message(websocket, session_id, client_os, client_caps, username, role)
+                    except Exception as err:
+                        print(f"[WS ERROR] Error en process_message: {err}")
+                        import traceback; traceback.print_exc()
+                        await _send_loop_step(websocket, "idle", "error", detail=f"Error: {str(err)[:50]}")
+                        await websocket.send_text(SpeakResponse(message="Disculpe señor, ocurrió un error procesando su solicitud.").model_dump_json())
 
                 elif msg_type == "tool_result":
                     res_obj = ToolResultRequest(**data)
                     output_text = res_obj.output if not res_obj.error else f"Error: {res_obj.error}"
-                    print(f"️ Tool Result: {output_text[:50]}...")
+                    print(f" Tool Result: {output_text[:50]}...")
 
                     await add_message(session_id, {
                         "role": "tool",
@@ -121,19 +128,34 @@ async def chat_endpoint(websocket: WebSocket):
                     )
 
             except json.JSONDecodeError:
-                print("️ Mensaje WS no es JSON")
+                print(" Mensaje WS no es JSON")
 
     except WebSocketDisconnect:
         manager.disconnect(session_id)
         print(f" Cliente {session_id} desconectado")
     except Exception as e:
         manager.disconnect(session_id)
-        print(f"️ Error fatal websocket: {e}")
+        print(f" Error fatal websocket: {e}")
+
 
 
 # ---------------------------------------------------------------------------
 # Main message routing logic
 # ---------------------------------------------------------------------------
+
+async def _send_loop_step(websocket: WebSocket, step: str, status: str = "active", **kwargs):
+    """Emits real-time Loop Engineering process step events to the frontend HUD."""
+    try:
+        payload = {
+            "type": "loop_step",
+            "step": step,
+            "status": status,
+            **kwargs
+        }
+        await websocket.send_text(json.dumps(payload))
+    except Exception:
+        pass
+
 
 async def process_message(
     websocket: WebSocket,
@@ -144,37 +166,52 @@ async def process_message(
     role: str,
 ):
     """
-    1. Classify intent with OSS 20B (fast, < 300ms).
-    2a. 'chat' → Stream response from OSS 20B sentence by sentence.
-    2b. 'tool' → Send ThinkingResponse immediately, then launch reasoning in background.
+    Loop Engineering Pipeline:
+    1. Ingestion: Prompt received.
+    2. Fast Router: groq/compound-mini classifies domain and stalling phrase.
+    3. Context Pruner: Prunes skills to match domain (< 1200 tokens).
+    4. Reasoning / Fast Stream: Routes to reasoning or fast generator.
     """
-    history = await get_recent_history(session_id, limit=10)
+    history = await get_recent_history(session_id, limit=6)
 
-    # --- Step 1: Fast intent classification ---
+    # 1. Ingestion
+    await _send_loop_step(websocket, "ingestion", "active", detail="Prompt recibido y verificado")
+
+    # 2. Fast Router
+    await _send_loop_step(websocket, "router", "active", model=settings.ROUTER_MODEL, detail=f"Clasificando con {settings.ROUTER_MODEL}...")
     classification = await classify_intent(history)
-    intent = classification["intent"]
-    stalling_phrase = classification["stalling_phrase"]
+    intent = classification.get("intent", "tool")
+    domain = classification.get("domain", "system")
+    stalling_phrase = classification.get("stalling_phrase", "")
+    await _send_loop_step(websocket, "router", "completed", domain=domain, intent=intent, stalling=stalling_phrase, detail=f"Dominio: {domain.upper()}")
 
-    print(f"[ROUTER] Intent: {intent}")
+    print(f"[ROUTER] Dominio: {domain} | Intent: {intent}")
 
     if intent == "chat":
-        # --- Path A: Fast streaming response ---
+        # Branch Left: Nodo 2A Fast Conversational Stream
+        await _send_loop_step(websocket, "fast_stream", "active", model=settings.FAST_MODEL, detail=f"Streaming respuesta rápida con {settings.FAST_MODEL}...")
         await _stream_fast_and_save(websocket, session_id, history, client_os, username)
+        await _send_loop_step(websocket, "fast_stream", "completed", detail="Respuesta conversacional generada")
+        await _send_loop_step(websocket, "synthesizer", "active", detail="Audio TTS y renderizado en HUD")
+        await _send_loop_step(websocket, "idle", "idle", detail="Ciclo completado. JARVIS en espera.")
     else:
-        # --- Path B: Send stalling phrase immediately, reason in background ---
+        # Branch Right: Nodo 2B Context & Skill Pruner
+        await _send_loop_step(websocket, "pruning", "completed", domain=domain, detail=f"Inyectando SOLO skills de {domain.upper()} (< 1,200 tokens)")
+
+        # Send stalling phrase immediately
         if stalling_phrase:
             thinking_resp = ThinkingResponse(message=stalling_phrase)
             await websocket.send_text(thinking_resp.model_dump_json())
             print(f" [STALLING] Jarvis dice: {stalling_phrase}")
 
-        # Launch reasoning as a non-blocking background task
+        # 4. Launch reasoning in background
         asyncio.create_task(
-            _run_reasoning_and_respond(websocket, session_id, history, client_os, client_caps, username, role)
+            _run_reasoning_and_respond(websocket, session_id, history, client_os, client_caps, username, role, domain=domain)
         )
 
 
 # ---------------------------------------------------------------------------
-# Fast streaming path (OSS 20B)
+# Fast streaming path
 # ---------------------------------------------------------------------------
 
 async def _stream_fast_and_save(
@@ -209,7 +246,7 @@ async def _stream_fast_and_save(
 
 
 # ---------------------------------------------------------------------------
-# Reasoning path (Qwen 27B) — background task
+# Reasoning path — background task
 # ---------------------------------------------------------------------------
 
 async def _run_reasoning_and_respond(
@@ -220,13 +257,15 @@ async def _run_reasoning_and_respond(
     client_caps: list,
     username: str,
     role: str,
+    domain: str = None,
 ):
     """
-    Background task: calls the Reasoning model and handles the full tool-calling loop.
-    Equivalent to the old process_llm_loop but runs without blocking the WebSocket.
+    Background task: calls the Reasoning model with domain-specific tools and handles tool execution.
     """
     try:
-        action = await chat_reasoning(history, client_os, client_caps, username, role)
+        await _send_loop_step(websocket, "reasoning", "active", model=settings.REASONING_MODEL, domain=domain, detail=f"Orquestador de razonamiento con {settings.REASONING_MODEL}...")
+        action = await chat_reasoning(history, client_os, client_caps, username, role, domain=domain)
+        await _send_loop_step(websocket, "reasoning", "completed", detail="Razonamiento completado")
         await _dispatch_action(websocket, session_id, action, client_os, client_caps, username, role)
     except Exception as e:
         print(f"️ Error en tarea de razonamiento: {e}")
@@ -234,8 +273,11 @@ async def _run_reasoning_and_respond(
             await websocket.send_text(
                 SpeakResponse(message="Señor, ocurrió un error en el proceso de razonamiento.").model_dump_json()
             )
+            await _send_loop_step(websocket, "idle", "error", detail=f"Error en razonamiento: {str(e)[:60]}")
         except Exception:
             pass
+
+
 
 
 async def _dispatch_action(
@@ -266,6 +308,7 @@ async def _dispatch_action(
                 }]
             })
 
+            await _send_loop_step(websocket, "skill_runner", "active", skill="terminal_cmd", detail=f"Ejecutando comando: {action['command'][:35]}...")
             resp = ToolCallResponse(
                 tool_call_id=action["tool_call_id"],
                 tool="execute_command",
@@ -292,6 +335,7 @@ async def _dispatch_action(
                 }]
             })
 
+            await _send_loop_step(websocket, "skill_runner", "active", skill=skill_name, detail=f"Invocando skill: {skill_name}...")
             resp = ToolCallResponse(
                 tool_call_id=action["tool_call_id"],
                 tool="execute_skill",
@@ -302,9 +346,11 @@ async def _dispatch_action(
             await websocket.send_text(resp.model_dump_json())
 
     elif action["type"] == "server_skill":
+        await _send_loop_step(websocket, "skill_runner", "active", skill=action.get("skill_name"), detail=f"Ejecutando server skill: {action.get('skill_name')}...")
         await _handle_server_skill(websocket, session_id, action, client_os, client_caps, username, role)
 
     elif action["type"] == "server_tool":
+        await _send_loop_step(websocket, "skill_runner", "active", skill=action.get("tool"), detail=f"Ejecutando server tool: {action.get('tool')}...")
         await _handle_server_tool(websocket, session_id, action, client_os, client_caps, username, role)
 
     elif action["type"] == "speak":
@@ -312,9 +358,14 @@ async def _dispatch_action(
             "role": "assistant",
             "content": action["message"]
         })
+        # Nodo 5: Executive Response Formatter
+        await _send_loop_step(websocket, "formatter", "completed", detail="Respuesta ejecutiva estructurada")
+        # Salida: TTS Streaming Local pyttsx3 + HUD
+        await _send_loop_step(websocket, "synthesizer", "active", detail="Transmitiendo respuesta a TTS local + HUD...")
         resp = SpeakResponse(message=action["message"])
         print(f" Jarvis dice: {action['message']}")
         await websocket.send_text(resp.model_dump_json())
+        await _send_loop_step(websocket, "idle", "idle", detail="Ciclo completado. JARVIS en espera.")
 
 
 # ---------------------------------------------------------------------------

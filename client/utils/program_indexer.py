@@ -121,4 +121,4 @@ def find_program(program_name):
     return None
 
 
-build_index()
+# build_index() # Deshabilitado para evitar 13 segundos de escaneo inútil en cada arranque

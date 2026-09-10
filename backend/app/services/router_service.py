@@ -1,7 +1,7 @@
 """
-Router Service module.
-Uses the fast OSS 20B model to classify user intent and generate stalling phrases.
-This runs before the heavy Reasoning model to keep the WebSocket responsive.
+Router Service module — JARVIS 2.5 Loop Engineering.
+Classifies user intent into specialized domains (chat, system, research, media)
+and generates human stalling phrases for non-chat actions.
 """
 import json
 import random
@@ -11,57 +11,54 @@ from app.core.logger import get_logger
 
 logger = get_logger("router_service")
 
-# Build router clients from same API key pool as main service
-_api_keys = [k.strip() for k in settings.GROQ_API_KEYS.split(",") if k.strip()]
-_router_clients = [AsyncGroq(api_key=key) for key in _api_keys]
+# Build router clients from segregated FAST keys pool
+_fast_keys = settings.get_fast_keys()
+if not _fast_keys:
+    _fast_keys = [settings.GROQ_API_KEY] if settings.GROQ_API_KEY else []
+
+_router_clients = [AsyncGroq(api_key=key) for key in _fast_keys] if _fast_keys else []
 _router_client_idx = 0
 
-# Fallback stalling phrases if the router itself fails
 FALLBACK_STALLING = [
-    "Un momento, señor, consultando los sistemas.",
-    "Dame un segundo, procesando su solicitud.",
-    "Revisando la información, señor.",
-    "Accediendo a los datos, un instante.",
-    "Déjeme verificarlo, señor.",
+    "Dame un segundo, revisando eso.",
+    "Un momento, procesando la solicitud.",
+    "Déjame ver qué encuentro.",
+    "A la orden, dame un instante.",
+    "Revisando los sistemas, espérame un momento."
 ]
 
-_ROUTER_SYSTEM_PROMPT = """Eres un clasificador de intenciones para JARVIS, un asistente de escritorio autónomo.
-Tu ÚNICA tarea es analizar el último mensaje del usuario y responder con un JSON.
+_ROUTER_SYSTEM_PROMPT = """Eres el clasificador de intenciones de JARVIS.
+Analiza el último mensaje y responde EXCLUSIVAMENTE con este JSON:
+{"domain": "chat"|"system"|"research"|"media", "stalling_phrase": "frase corta casual en español o vacía si es chat"}
 
-Responde EXCLUSIVAMENTE con este JSON (sin texto adicional, sin markdown, sin explicaciones):
-{
-  "intent": "chat" | "tool",
-  "stalling_phrase": "..." 
-}
-
-REGLAS:
-- "chat": El usuario quiere conversar, preguntar algo general, o la respuesta no requiere acceder a herramientas externas, ejecutar comandos, buscar datos o realizar acciones en el sistema.
-- "tool": El usuario pide abrir programas, ejecutar comandos, buscar en el sistema, gestionar archivos, agendar recordatorios, o cualquier acción que requiera herramientas.
-- "stalling_phrase": Una frase corta y formal en español para decirle al usuario mientras se procesa su solicitud. Solo se usa si intent="tool". Ejemplos: "Un momento señor, ejecutando el comando.", "Verificando los sistemas, señor."
-- Si intent="chat", la stalling_phrase puede ser una cadena vacía "".
-- Habla SIEMPRE en primera persona, formal, con "señor". Sin emojis."""
+Reglas:
+- "chat": Charla general, saludos, ayuda conceptual o preguntas directas sin necesidad de herramientas.
+- "system": Abrir programas, volumen, ventanas, hardware, comandos de terminal o telemetría.
+- "research": Búsquedas en internet, noticias, clima o consultar datos web en tiempo real.
+- "media": Reproducir música, canciones en YouTube Music o pausar/cambiar pistas.
+- "stalling_phrase": Frase humana, breve y casual (sin emojis). Si domain="chat", déjala vacía ""."""
 
 
 async def classify_intent(session_history: list) -> dict:
     """
-    Classifies the user's last message as 'chat' or 'tool' using the fast OSS 20B model.
-    
+    Classifies the user's intent into a domain and produces a stalling phrase.
     Returns:
-        dict with keys: "intent" ("chat" | "tool"), "stalling_phrase" (str)
+        dict: {"intent": "chat"|"tool", "domain": "chat"|"system"|"research"|"media", "stalling_phrase": str}
     """
     global _router_client_idx
 
-    # Build a minimal context: only the last 4 messages + last user message
-    recent = session_history[-4:] if len(session_history) > 4 else session_history
-    messages_for_router = [
-        {"role": "system", "content": _ROUTER_SYSTEM_PROMPT}
-    ]
+    if not _router_clients:
+        logger.warning("[ROUTER] No hay clientes de Groq configurados para router. Defaulting a 'tool'.")
+        return {"intent": "tool", "domain": "system", "stalling_phrase": random.choice(FALLBACK_STALLING)}
+
+    # Minimal context: only last 3 messages to minimize tokens
+    recent = session_history[-3:] if len(session_history) > 3 else session_history
+    messages_for_router = [{"role": "system", "content": _ROUTER_SYSTEM_PROMPT}]
     for msg in recent:
         role = msg.get("role", "user")
         content = msg.get("content", "")
-        # Skip tool calls and tool results — the router only needs conversational context
         if role in ("user", "assistant") and isinstance(content, str) and content:
-            messages_for_router.append({"role": role, "content": content[:500]})
+            messages_for_router.append({"role": role, "content": content[:300]})
 
     for attempt in range(len(_router_clients)):
         client = _router_clients[_router_client_idx]
@@ -69,42 +66,42 @@ async def classify_intent(session_history: list) -> dict:
             response = await client.chat.completions.create(
                 model=settings.ROUTER_MODEL,
                 messages=messages_for_router,
+                response_format={"type": "json_object"},
                 max_tokens=128,
-                temperature=0.1,  # Low temperature for consistent classification
+                temperature=0.1,
                 stream=False,
             )
             raw = (response.choices[0].message.content or "").strip()
 
-            # Clean up potential markdown fences
-            if raw.startswith("```"):
-                raw = raw.split("```")[1]
-                if raw.startswith("json"):
-                    raw = raw[4:]
-                raw = raw.strip()
-
             parsed = json.loads(raw)
-            intent = parsed.get("intent", "tool")
-            stalling = parsed.get("stalling_phrase", random.choice(FALLBACK_STALLING))
+            domain = parsed.get("domain", "system").lower()
+            if domain not in ("chat", "system", "research", "media"):
+                domain = "system"
 
-            # Validate intent value
-            if intent not in ("chat", "tool"):
-                intent = "tool"
+            stalling = parsed.get("stalling_phrase", "").strip()
+            if domain != "chat" and not stalling:
+                stalling = random.choice(FALLBACK_STALLING)
 
-            logger.info(f"[ROUTER] Intent clasificado: {intent}")
-            return {"intent": intent, "stalling_phrase": stalling}
+            intent = "chat" if domain == "chat" else "tool"
+
+            logger.info(f"[ROUTER] Dominio: {domain} | Intent: {intent}")
+            return {
+                "intent": intent,
+                "domain": domain,
+                "stalling_phrase": stalling
+            }
 
         except RateLimitError:
             logger.warning(f"[ROUTER] Rate limit en key {_router_client_idx}. Rotando...")
             _router_client_idx = (_router_client_idx + 1) % len(_router_clients)
             continue
         except (json.JSONDecodeError, KeyError) as e:
-            # If parsing fails, default to 'tool' to be safe (reasoning model will handle it)
-            logger.warning(f"[ROUTER] No se pudo parsear respuesta del router: {e}. Defaulting a 'tool'.")
-            return {"intent": "tool", "stalling_phrase": random.choice(FALLBACK_STALLING)}
+            logger.warning(f"[ROUTER] Error parseando respuesta: {e}. Defaulting a 'tool'.")
+            return {"intent": "tool", "domain": "system", "stalling_phrase": random.choice(FALLBACK_STALLING)}
         except Exception as e:
-            logger.error(f"[ROUTER] Error inesperado: {e}", exc_info=True)
-            return {"intent": "tool", "stalling_phrase": random.choice(FALLBACK_STALLING)}
+            logger.error(f"[ROUTER] Excepción inesperada: {e}", exc_info=True)
+            return {"intent": "tool", "domain": "system", "stalling_phrase": random.choice(FALLBACK_STALLING)}
 
-    # All keys exhausted — fallback safely
     logger.error("[ROUTER] Todos los clientes Groq agotados. Defaulting a 'tool'.")
-    return {"intent": "tool", "stalling_phrase": random.choice(FALLBACK_STALLING)}
+    return {"intent": "tool", "domain": "system", "stalling_phrase": random.choice(FALLBACK_STALLING)}
+

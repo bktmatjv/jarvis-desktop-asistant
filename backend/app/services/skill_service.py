@@ -50,17 +50,53 @@ def load_skills():
                         
     return skills
 
-def get_llm_tools():
-    skills = load_skills()
-    llm_tools = []
-    for skill in skills:
-        tool = {
-            "type": "function",
-            "function": {
-                "name": skill.get("name"),
-                "description": skill.get("description", ""),
-                "parameters": skill.get("parameters", {"type": "object", "properties": {}})
-            }
-        }
-        llm_tools.append(tool)
-    return llm_tools
+DOMAIN_SKILL_MAP = {
+    "system": ["system_control", "window_manager", "system_telemetry", "input_controller", "execute_command"],
+    "research": ["web_search", "web_fetch", "search_memory", "save_memory"],
+    "media": ["play_ytmusic", "media_control", "system_control"],
+    "chat": []
+}
+
+def get_tools_for_domain(domain: str = None, all_core_tools: list = None):
+    """
+    Skill & Context Pruner: returns only the tools/skills relevant to the target domain.
+    Drastically reduces token usage to avoid Groq TPM rate limits.
+    """
+    if all_core_tools is None:
+        all_core_tools = []
+
+    if domain == "chat":
+        return []
+
+    target_names = DOMAIN_SKILL_MAP.get(domain)
+    
+    # If no specific domain match, return all available tools
+    all_skills = load_skills()
+    dynamic_tools = []
+    for skill in all_skills:
+        name = skill.get("name")
+        if target_names is None or name in target_names:
+            dynamic_tools.append({
+                "type": "function",
+                "function": {
+                    "name": name,
+                    "description": skill.get("description", ""),
+                    "parameters": skill.get("parameters", {"type": "object", "properties": {}})
+                }
+            })
+
+    # Filter core tools (execute_command, schedule_reminder, etc.)
+    filtered_core = []
+    for ct in all_core_tools:
+        c_name = ct.get("function", {}).get("name")
+        if target_names is None or c_name in target_names:
+            filtered_core.append(ct)
+
+    # Always ensure at least the domain-specific tools or fallback to core
+    combined = filtered_core + dynamic_tools
+    if not combined and domain != "chat":
+        # Safe fallback: at least provide execute_command
+        return [ct for ct in all_core_tools if ct.get("function", {}).get("name") == "execute_command"]
+
+    return combined
+

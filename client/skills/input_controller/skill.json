@@ -1,0 +1,37 @@
+{
+  "name": "input_controller",
+  "description": "Simulación y control de teclado y ratón: escribir texto, presionar combinaciones de teclas (atajos como 'ctrl+c', 'win+d', 'alt+tab', 'enter'), mover el cursor, hacer clic o scroll.",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "action": {
+        "type": "string",
+        "enum": ["type_text", "hotkey", "click", "move_mouse", "scroll"],
+        "description": "Acción de entrada a simular."
+      },
+      "text": {
+        "type": "string",
+        "description": "Texto a escribir si action='type_text'."
+      },
+      "keys": {
+        "type": "string",
+        "description": "Atajo o tecla a presionar si action='hotkey' (ej. 'ctrl+c', 'enter', 'alt+tab', 'win+d')."
+      },
+      "x": {
+        "type": "integer",
+        "description": "Coordenada X en pantalla para move_mouse o click. Opcional."
+      },
+      "y": {
+        "type": "integer",
+        "description": "Coordenada Y en pantalla para move_mouse o click. Opcional."
+      },
+      "scroll_amount": {
+        "type": "integer",
+        "description": "Cantidad de scroll (positivo arriba, negativo abajo) si action='scroll'."
+      }
+    },
+    "required": ["action"]
+  },
+  "executable": "main.py",
+  "language": "python"
+}

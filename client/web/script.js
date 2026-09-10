@@ -1,12 +1,42 @@
 const input = document.getElementById('commandInput');
 const statusText = document.getElementById('status');
-const ring1 = document.getElementById('ring1');
-const wrapper = document.getElementById('mainWrapper');
-const jarvisResponse = document.getElementById('jarvisResponse');        
+
+// --- 0. CINEMATIC BOOT SEQUENCE ---
+// The visual animation is handled by animation/jarvisActivation.js (ES Module).
+// That module calls runJarvisActivation() automatically on DOMContentLoaded,
+// then fires onActivationComplete() below when it's done.
+//
+// We expose the callback via window so the module can call it across the
+// module/non-module script boundary.
+window.onActivationComplete = function () {
+    // Clock, audio visualizer, and other panel logic start AFTER animation
+    startClock();
+    startAudioVisualizer();
+    loadSystemData();
+};
+
+
+// --- 0.1 HEADER CONTROLS ---
+function toggleBtn(btn) {
+    btn.classList.toggle('active');
+}
+
+function winMin() {
+    if (window.pywebview) window.pywebview.api.minimize_window();
+}
+
+function winMax() {
+    if (window.pywebview) window.pywebview.api.maximize_window();
+}
+
+function winClose() {
+    if (window.pywebview) window.pywebview.api.close_window();
+}
+
 
 // --- 1. LÓGICA DEL VISUALIZADOR DE AUDIO ---
 const vizContainer = document.getElementById('audioViz');
-const numBars = 32;
+const numBars = 40;
 let isProcessing = false;
 
 for(let i=0; i<numBars; i++) {
@@ -26,52 +56,80 @@ function animateVisualizer() {
     });
     setTimeout(() => requestAnimationFrame(animateVisualizer), 70);
 }
-animateVisualizer();
 
-// --- 2. COMUNICACIÓN Y FUNCIONES ---
-function updateStatus(text) {
-    statusText.innerText = `[ ${text.toUpperCase()} ]`;
-    statusText.style.color = "#00e5ff"; 
+// Wrapped so the animation can start it post-activation
+function startAudioVisualizer() {
+    animateVisualizer();
 }
+
+// --- 2. COMUNICACIÓN Y FUNCIONES (CHAT DINAMICO) ---
+const chatHistory = document.getElementById('chatHistory');
 
 function formatMarkdown(text) {
     if (!text) return "";
-    let html = text.replace(/\*\*(.*?)\*\*/g, '<b style="color: #00e5ff;">$1</b>');
+    let html = text.replace(/\*\*(.*?)\*\*/g, '<b style="color: var(--jarvis-cyan);">$1</b>');
     html = html.replace(/\*(.*?)\*/g, '<i>$1</i>');
     html = html.replace(/`(.*?)`/g, '<code style="background: rgba(0,229,255,0.2); padding: 2px 4px; border-radius: 3px;">$1</code>');
+    // Convert newlines to br for bubbles
+    html = html.replace(/\n/g, '<br>');
     return html;
 }
 
+function addChatMessage(text, sender) {
+    const msgDiv = document.createElement('div');
+    msgDiv.className = `message ${sender}`;
+    
+    const timeText = new Date().toLocaleTimeString('es-ES', {hour: '2-digit', minute:'2-digit', second:'2-digit'});
+    
+    let innerHTML = '';
+    if (sender === 'jarvis') {
+        innerHTML += `<div class="sender">JARVIS</div>`;
+    }
+    innerHTML += `<div class="bubble">${sender === 'jarvis' ? formatMarkdown(text) : text}</div>`;
+    innerHTML += `<div class="time">${timeText}</div>`;
+    
+    msgDiv.innerHTML = innerHTML;
+    chatHistory.appendChild(msgDiv);
+    chatHistory.scrollTop = chatHistory.scrollHeight;
+}
+
+// Escuchamos el Enter en el chat
 input.addEventListener('keydown', async function(e) {
     if (e.key === 'Enter') {
         const text = input.value.trim();
         
         if (text !== "") {
+            addChatMessage(text, 'user');
+            
             if (window.pywebview) {
-                // 1. Estado de "Pensando"
-                statusText.innerText = "[ PROCESSING_COMMAND... ]";
+                // Estado Pensando
+                statusText.innerText = "[ PROCESSING... ]";
                 statusText.style.color = "#fff";
-                ring1.style.animationDuration = "0.5s"; 
+                const core = document.getElementById('brainCoreSVG');
+                if (core) core.style.animationDuration = '0.5s';
                 isProcessing = true; 
-                
-                // Actualizamos la nueva pantalla
-                jarvisResponse.innerText = "PROCESANDO CONSULTA...";
-                jarvisResponse.classList.add("processing");
-                
                 input.value = ''; 
+
+                // Notificar inicio de ciclo al visualizador del Loop Engineering
+                if (window.updateLoopProcess) {
+                    window.updateLoopProcess({
+                        step: 'ingestion',
+                        status: 'active',
+                        detail: `Prompt: "${text.substring(0, 32)}..."`
+                    });
+                }
                 
-                // 2. Enviamos el comando a Python
-                const result = await pywebview.api.send_command(text);
-                
-                // 3. Mostramos la respuesta del JSON/LLM en la pantalla
-                jarvisResponse.innerHTML = formatMarkdown(result);
-                jarvisResponse.classList.remove("processing");
-                
-                // Restauramos el estado
-                statusText.innerText = `[ SYS_READY ]`;
-                statusText.style.color = "#00ff00"; 
-                ring1.style.animationDuration = "10s"; 
-                isProcessing = false; 
+                // Enviamos el comando a Python (la respuesta real llega vía WebSocket a updateJarvisResponse)
+                await pywebview.api.send_command(text);
+            } else {
+                // MOCK para navegador
+                if (window.simulateLoopCycle) {
+                    window.simulateLoopCycle(text);
+                }
+                setTimeout(() => {
+                    addChatMessage("Esta es una respuesta simulada del sistema porque no estás ejecutando en Python.", 'jarvis');
+                    resetHUD();
+                }, 1200);
             }
         }
     }
@@ -84,19 +142,13 @@ input.addEventListener('keydown', async function(e) {
     }
 });
 
-// --- 3. ANIMACIÓN DE ARRANQUE ---
-window.addEventListener('focus', () => {
-    input.focus();
-    resetHUD();
-    wrapper.classList.remove('boot-sequence');
-    void wrapper.offsetWidth; 
-    wrapper.classList.add('boot-sequence');
-});
-
+// --- 3. ANIMACIÓN DE ARRANQUE / WAKE ---
 function resetHUD() {
-    statusText.innerText = "[ AWAITING_INPUT ]";
-    statusText.style.color = "#00e5ff";
-    ring1.style.animationDuration = "10s";
+    statusText.innerText = "[ JARVIS ONLINE ]";
+    statusText.style.color = "var(--jarvis-green)";
+    // brainCoreSVG replaces the old brainCore3D
+    const core = document.getElementById('brainCoreSVG');
+    if (core) core.style.animationDuration = '2s';
     isProcessing = false;
     document.body.style.opacity = "1";
     document.body.style.filter = "none";
@@ -105,8 +157,8 @@ function resetHUD() {
 function sleepUI() {
     statusText.innerText = "[ SLEEPING_MODE ]";
     statusText.style.color = "#444";
-    ring1.style.animationDuration = "30s";
-    jarvisResponse.innerText = "SISTEMA EN ESPERA... DIGA 'JARVIS' PARA INVOCAR";
+    const core = document.getElementById('brainCoreSVG');
+    if (core) core.style.animationDuration = '6s';
     document.body.style.opacity = "0.7";
     document.body.style.filter = "grayscale(50%) brightness(0.6)";
 }
@@ -120,28 +172,62 @@ function wakeUpUI() {
 
 function listeningUI() {
     statusText.innerText = "[ LISTENING_VOICE... ]";
-    statusText.style.color = "#ff00ff";
-    ring1.style.animationDuration = "0.2s"; 
-    jarvisResponse.innerText = "ESCUCHANDO...";
-    jarvisResponse.classList.add("processing");
+    statusText.style.color = "var(--jarvis-cyan)";
+    const core = document.getElementById('brainCoreSVG');
+    if (core) core.style.animationDuration = '0.1s'; 
 }
 
 // --- 4. RELOJ Y SENSORES ---
-setInterval(() => {
-    const now = new Date();
-    document.getElementById('clock').innerText = now.toLocaleTimeString('es-ES', {hour: '2-digit', minute:'2-digit'});
-}, 1000);
+let clockInterval = null;
+
+function startClock() {
+    if (clockInterval) return; // Prevent double start
+    clockInterval = setInterval(() => {
+        const now = new Date();
+        document.getElementById('clock-time').innerText = now.toLocaleTimeString('es-ES', {hour: '2-digit', minute:'2-digit', second:'2-digit'});
+        const options = { day: '2-digit', month: 'short', year: 'numeric' };
+        document.getElementById('clock-date').innerText = now.toLocaleDateString('en-GB', options).toUpperCase();
+    }, 1000);
+}
+
+function loadSystemData() {
+    // Initial data load + recurring update
+    updateHUD();
+    setInterval(updateHUD, 2000);
+}
 
 async function updateHUD() {
     if (window.pywebview) {
         try {
             const sysData = await pywebview.api.get_system_data();
-            document.getElementById('greetingDisplay').innerText = sysData.greeting;
+            
             const cpuText = document.getElementById('cpuData');
-            cpuText.innerText = `CPU: ${sysData.cpu.toFixed(1)}% ${sysData.cpu > 80 ? "[CRITICAL]" : "[STABLE]"}`;
-            cpuText.style.color = sysData.cpu > 80 ? "#ff3333" : "var(--jarvis-cyan)";
-            document.getElementById('ramData').innerText = `RAM: ${sysData.ram_used} / ${sysData.ram_total} GB`;
-            document.getElementById('ramFill').style.width = `${sysData.ram_percent}%`;
+            const cpuRing = document.getElementById('cpu-ring');
+            cpuText.innerText = `${sysData.cpu.toFixed(0)}%`;
+            cpuRing.style.strokeDasharray = `${sysData.cpu.toFixed(0)}, 100`;
+            // Flash animation on value update
+            cpuText.classList.remove('updated');
+            void cpuText.offsetWidth; // reflow to restart animation
+            cpuText.classList.add('updated');
+            
+            const ramPercent = sysData.ram_percent.toFixed(0);
+            const ramText = document.getElementById('ramData');
+            ramText.innerText = `${ramPercent}%`;
+            document.getElementById('ram-ring').style.strokeDasharray = `${ramPercent}, 100`;
+            ramText.classList.remove('updated');
+            void ramText.offsetWidth;
+            ramText.classList.add('updated');
+
+            // Populate user identity fields dynamically (no hardcoded personal data)
+            if (sysData.username) {
+                const unEl = document.getElementById('user-name');
+                const urEl = document.getElementById('user-role');
+                const dnEl = document.getElementById('device-name');
+                if (unEl) unEl.innerText = sysData.username;
+                if (urEl) urEl.innerText = (sysData.role || 'USUARIO').toUpperCase();
+                if (dnEl) dnEl.innerText = sysData.device_name || 'JARVIS-HOST';
+            }
+            
         } catch (err) {}
     }
 }
@@ -155,28 +241,30 @@ window.addEventListener('pywebviewready', function() {
 function addLog(message) {
     const consoleBox = document.getElementById('miniConsole');
     const newLog = document.createElement('div');
+    newLog.className = 'log-line';
     const time = new Date().toLocaleTimeString('es-ES', {hour: '2-digit', minute:'2-digit', second:'2-digit'});
     
-    if(message.includes("[ALERTA]") || message.includes("error") || message.includes("ERROR") || message.includes("[DENEGADA]")) {
-        newLog.style.color = "#ff3333";
-    } else if (message.includes("[PERMITIDA]") || message.includes("Done") || message.includes("COMPLETADA") || message.includes("SUCCESS")) {
-        newLog.style.color = "#00ff00";
+    let tag = '<span class="tag cyan">[INFO]</span>';
+    if(message.includes("error") || message.includes("ERROR") || message.includes("[DENEGADA]")) {
+        tag = '<span class="tag red">[ERROR]</span>';
+    } else if (message.includes("[PERMITIDA]") || message.includes("Done") || message.includes("SUCCESS")) {
+        tag = '<span class="tag green">[SUCCESS]</span>';
+    } else if (message.includes("warn") || message.includes("WARN")) {
+        tag = '<span class="tag orange">[WARN]</span>';
     }
     
-    newLog.innerText = `[${time}] ${message}`;
+    newLog.innerHTML = `<span class="time">${time}</span> ${tag} ${message}`;
     consoleBox.appendChild(newLog);
     consoleBox.scrollTop = consoleBox.scrollHeight;
 }
 
-// --- 6. SEGURIDAD (DUMB CLIENT) ---
+// --- 6. SEGURIDAD ---
 function showSecurityAlert(commandStr) {
     const modal = document.getElementById('securityModal');
     const cmdEl = document.getElementById('securityCommand');
     
     cmdEl.innerText = commandStr;
-    modal.style.display = 'flex';
-    
-    // Pause auto-hide or focus issues if any
+    modal.style.display = 'block'; 
     input.blur();
 }
 
@@ -192,51 +280,26 @@ function confirmSecurity(isAllowed) {
 }
 
 function updateJarvisResponse(text) {
-    const jarvisResponse = document.getElementById('jarvisResponse');
-    const actionDisplay = document.getElementById('actionDisplay');
-    const actionHeader = document.getElementById('actionHeader');
-    const actionText = document.getElementById('actionText');
-    const outputDisplay = document.getElementById('outputDisplay');
-    const statusText = document.getElementById('status');
-    const ring1 = document.getElementById('ring1');
-    const ring2 = document.querySelector('.reactor-ring-2');
-    
-    actionDisplay.classList.remove('active');
-    actionHeader.innerText = '[ STANDBY ]';
-    actionText.innerText = '>_ WAITING FOR PROCESS...';
-    outputDisplay.style.opacity = '0.2';
-    
-    jarvisResponse.innerHTML = formatMarkdown(text);
-    jarvisResponse.classList.remove("processing");
-    
-    statusText.innerText = `[ SYS_READY ]`;
-    statusText.style.color = "#00ff00"; 
-    ring1.style.animationDuration = "10s"; 
-    ring2.style.borderColor = "#fff";
-    isProcessing = false; 
+    addChatMessage(text, 'jarvis');
+    resetHUD();
+    if (window.updateLoopProcess) {
+        window.updateLoopProcess({
+            step: 'idle',
+            status: 'idle',
+            detail: 'Respuesta completada y transmitida.'
+        });
+    }
 }
 
 let typeWriterTimeout = null;
 
 function showSystemAction(commandText) {
     const actionDisplay = document.getElementById('actionDisplay');
-    const actionHeader = document.getElementById('actionHeader');
-    const actionText = document.getElementById('actionText');
     const outputDisplay = document.getElementById('outputDisplay');
-    const statusText = document.getElementById('status');
-    const ring1 = document.getElementById('ring1');
-    const ring2 = document.querySelector('.reactor-ring-2');
     
-    actionDisplay.classList.add('active');
-    actionHeader.innerText = '[ SYSTEM.OVERRIDE ]';
     outputDisplay.style.opacity = '0.2'; 
     
-    statusText.innerText = `[ EXECUTING_SUBROUTINE ]`;
-    statusText.style.color = "#ff003c";
-    ring1.style.animationDuration = "0.2s"; 
-    ring2.style.borderColor = "#ff003c";
-    
-    actionText.innerText = ">_ ";
+    actionDisplay.innerText = ">_ ";
     let i = 0;
     const fullText = ">_ " + commandText;
     
@@ -244,124 +307,95 @@ function showSystemAction(commandText) {
     
     function type() {
         if (i < fullText.length) {
-            actionText.innerText = fullText.substring(0, i+1);
+            actionDisplay.innerText = fullText.substring(0, i+1);
             i++;
             typeWriterTimeout = setTimeout(type, 15);
         }
     }
     type();
+
+    if (window.updateLoopProcess) {
+        window.updateLoopProcess({
+            step: 'skill_runner',
+            status: 'active',
+            skill: commandText,
+            detail: `Ejecutando: ${commandText.substring(0, 30)}...`
+        });
+    }
 }
 
 function showCommandOutput(outputText) {
     const outputDisplay = document.getElementById('outputDisplay');
-    const outputTextEl = document.getElementById('outputText');
-    const statusText = document.getElementById('status');
-    const ring1 = document.getElementById('ring1');
-    const ring2 = document.querySelector('.reactor-ring-2');
-    
     outputDisplay.style.opacity = '1';
-    outputTextEl.innerText = outputText;
-    
-    statusText.innerText = `[ COMMAND_EXECUTED ]`;
-    statusText.style.color = "#00ff00";
-    ring1.style.animationDuration = "5s"; 
-    ring2.style.borderColor = "#00ff00";
+    outputDisplay.innerText = outputText;
+
+    if (window.updateLoopProcess) {
+        window.updateLoopProcess({
+            step: 'skill_runner',
+            status: 'completed',
+            detail: 'Salida de proceso capturada con éxito.'
+        });
+    }
 }
 
 // --- 7. PLANNER AI ---
-let currentPlanSteps = [];
-
 function createTaskPlan(title, steps) {
-    const plannerDisplay = document.getElementById('plannerDisplay');
     const plannerTitle = document.getElementById('plannerTitle');
     const plannerSteps = document.getElementById('plannerSteps');
     
-    plannerTitle.innerText = `[ PLAN ] ${title.toUpperCase()}`;
+    plannerTitle.innerText = `TASK PLANNER - ${title.toUpperCase()}`;
     plannerSteps.innerHTML = '';
-    currentPlanSteps = steps;
     
     steps.forEach((step, index) => {
         const stepDiv = document.createElement('div');
-        stepDiv.className = 'task-step';
+        stepDiv.className = 'task-item'; // Default color cyan
         stepDiv.id = `task-step-${index}`;
-        
-        stepDiv.innerHTML = `
-            <span class="task-icon" id="task-icon-${index}">[ ]</span>
-            <span class="task-text">${step}</span>
-        `;
-        
+        stepDiv.innerHTML = `[-] ${step}`;
         plannerSteps.appendChild(stepDiv);
     });
-    
-    plannerDisplay.style.display = 'block';
 }
 
 function updateTaskStep(index, status) {
     const stepDiv = document.getElementById(`task-step-${index}`);
-    const iconSpan = document.getElementById(`task-icon-${index}`);
     
-    if (stepDiv && iconSpan) {
-        stepDiv.className = `task-step ${status}`;
+    if (stepDiv) {
+        let text = stepDiv.innerText.substring(4); // Remove prefix
         if (status === 'in_progress') {
-            iconSpan.innerText = '[~]';
+            stepDiv.className = `task-item cyan`;
+            stepDiv.innerText = `[~] ${text}`;
         } else if (status === 'completed') {
-            iconSpan.innerText = '[X]';
+            stepDiv.className = `task-item green`;
+            stepDiv.innerText = `[X] ${text}`;
         } else if (status === 'failed') {
-            iconSpan.innerText = '[!]';
+            stepDiv.className = `task-item red`;
+            stepDiv.innerText = `[!] ${text}`;
         }
     }
 }
 
-// --- 8. ADMIN DASHBOARD & SYSTEM STATUS ---
+// --- 8. ADMIN DASHBOARD ---
 function toggleAdminDashboard() {
     const modal = document.getElementById('adminDashboard');
     if (modal.style.display === 'none' || modal.style.display === '') {
-        modal.style.display = 'flex';
+        modal.style.display = 'block';
     } else {
         modal.style.display = 'none';
     }
 }
 
+// --- 9. SYSTEM STATUS UPDATE ---
 function updateSystemStatus(payload) {
-    const serversList = document.getElementById('dynamicServersList');
-    if (serversList) {
-        serversList.innerHTML = '';
-        if (payload.total_clients > 0) {
-            let totalDevices = 0;
-            payload.users.forEach(user => {
-                totalDevices += user.devices.length;
-            });
-            
-            serversList.innerHTML += `<div class="server-status"><span class="server-icon"></span> Usuarios Activos: <span class="status-ok">${payload.users.length}</span></div>`;
-            serversList.innerHTML += `<div class="server-status"><span class="server-icon">️</span> Dispositivos: <span class="status-ok">${totalDevices}</span></div>`;
-            serversList.innerHTML += `<div class="server-status"><span class="server-icon">⏱️</span> Backend: <span class="status-ok">ONLINE</span></div>`;
-        } else {
-            serversList.innerHTML = `<div class="server-status"><span class="server-icon">️</span> Sin clientes conectados.</div>`;
-        }
-    }
-
-    const adminTotal = document.getElementById('adminTotalNodes');
-    const adminList = document.getElementById('adminClientsList');
+    if (!payload) return;
     
-    if (adminTotal && adminList) {
-        adminTotal.innerText = payload.total_clients;
-        adminList.innerHTML = '';
-        
-        payload.users.forEach(user => {
-            let html = `<div class="admin-user-card">
-                            <div class="admin-user-title">
-                                <span> ${user.username}</span>
-                                <span style="font-size: 10px; color: ${user.role === 'admin' ? '#ffaa00' : '#00e5ff'};">[${user.role.toUpperCase()}]</span>
-                            </div>`;
-            
-            user.devices.forEach(dev => {
-                html += `<div class="admin-device-item">
-                            <span> ${dev.device_name} (${dev.os.toUpperCase()})</span>
-                            <span style="color: #00ff00;">ONLINE</span>
-                         </div>`;
-            });
-            html += `</div>`;
-            adminList.innerHTML += html;
-        });
+    // Log interno en consola del navegador
+    console.log("Estado del sistema actualizado:", payload);
+    
+    // Mostrar en la consola del HUD holográfico si incluye un mensaje general
+    if (payload.message) {
+        addLog(`[SYSTEM UPDATE] ${payload.message}`);
     }
+    
+    // (Opcional) Si el servidor envía métricas específicas, aquí se actualizaría el DOM
+    // Ejemplo hipotético:
+    // if(payload.network_status) updateNetwork(payload.network_status);
 }

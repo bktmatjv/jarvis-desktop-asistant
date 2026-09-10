@@ -1,25 +1,29 @@
 """
 Executor module.
-Parses JSON commands received from the backend via WebSocket and maps them to local execution functions (UI updates, Bash execution, or local tools).
+Parses JSON commands received from the backend via WebSocket and maps them
+to local execution functions (UI updates, Bash execution, or Skill execution).
+
+Note: The legacy client/tools/ layer (tool_registry, window_tool, etc.) was
+removed in v2.5.0. All OS capabilities now live in client/skills/.
 """
 import asyncio
 import json
 import os
 from repl import repl_instance
-from tool_registry import get_tool
 
 DANGEROUS_WORDS = ["rm -rf", "chmod", "chown", "mkfs", "dd", "mkpasswd", "passwd"]
 
-# Variable global para pausar la ejecución y esperar la respuesta del usuario
+# Evento global para el interceptor de seguridad
 security_event = asyncio.Event()
 security_allowed = False
 
-# Variable global para pausar la ejecución y esperar la respuesta del usuario
 async def execute_from_server(action: dict):
     """Ejecuta una acción local enviada por el servidor WebSocket"""
     import main
     msg_type = action.get("type")
-    main.reset_activity()
+    # NOTA: No llamamos reset_activity() aquí. El timer de inactividad solo
+    # debe resetearse con interacciones reales del usuario (voz, teclado),
+    # no con cada mensaje que llega del backend.
     
     tool_name = action.get("tool")
     
@@ -43,10 +47,10 @@ async def execute_from_server(action: dict):
         except Exception as e:
             print(f"Error al activar voz (thinking): {e}")
         # Show thinking indicator in HUD if available
-        if main.window:
+        if main.panel_window:
             try:
                 safe_msg = __import__('json').dumps(str(mensaje))
-                main.window.evaluate_js(f"showThinkingIndicator({safe_msg})")
+                main.panel_window.evaluate_js(f"showThinkingIndicator({safe_msg})")
             except Exception:
                 pass
         return None
@@ -54,24 +58,33 @@ async def execute_from_server(action: dict):
     if msg_type == "task_plan":
         title = action.get("title", "")
         steps = action.get("steps", [])
-        if main.window:
+        if main.panel_window:
             safe_title = title.replace("'", "\\'").replace('"', '\\"')
             steps_js = json.dumps(steps)
-            main.window.evaluate_js(f"createTaskPlan('{safe_title}', {steps_js})")
+            main.panel_window.evaluate_js(f"createTaskPlan('{safe_title}', {steps_js})")
         return None
         
     if msg_type == "task_update":
         step_index = action.get("step_index", 0)
         status = action.get("status", "")
-        if main.window:
+        if main.panel_window:
             safe_status = status.replace("'", "\\'").replace('"', '\\"')
-            main.window.evaluate_js(f"updateTaskStep({step_index}, '{safe_status}')")
+            main.panel_window.evaluate_js(f"updateTaskStep({step_index}, '{safe_status}')")
         return None
 
     if msg_type == "system_status":
-        if main.window:
+        if main.panel_window:
             safe_payload = json.dumps(action)
-            main.window.evaluate_js(f"updateSystemStatus({safe_payload})")
+            main.panel_window.evaluate_js(f"updateSystemStatus({safe_payload})")
+        return None
+
+    if msg_type == "loop_step":
+        if main.panel_window:
+            try:
+                safe_payload = json.dumps(action)
+                main.panel_window.evaluate_js(f"updateLoopProcess({safe_payload})")
+            except Exception:
+                pass
         return None
         
     tool_name = action.get("tool")
@@ -89,9 +102,9 @@ async def execute_from_server(action: dict):
             security_event.clear()
             global security_allowed
             security_allowed = False
-            if main.window:
+            if main.panel_window:
                 safe_cmd = command.replace("'", "\\'").replace('"', '\\"')
-                main.window.evaluate_js(f"showSecurityAlert('{safe_cmd}')")
+                main.panel_window.evaluate_js(f"showSecurityAlert('{safe_cmd}')")
             await security_event.wait()
             
             if not security_allowed:
@@ -172,18 +185,6 @@ async def execute_from_server(action: dict):
             main.show_action_output(error_msg)
             return {"type": "tool_result", "tool_call_id": tool_call_id, "error": error_msg}
         
-    elif tool_name:
-        tool_func = get_tool(tool_name)
-        if tool_func:
-            params = action.get("params", {})
-            try:
-                result = tool_func(**params) if isinstance(params, dict) else tool_func(params)
-                return {"type": "tool_result", "tool_call_id": tool_call_id, "output": str(result) if result else "Success"}
-            except Exception as e:
-                return {"type": "tool_result", "tool_call_id": tool_call_id, "error": str(e)}
-        else:
-            return {"type": "tool_result", "tool_call_id": tool_call_id, "error": f"Tool '{tool_name}' not found locally."}
-    
     return {"type": "error", "message": "Unknown action type"}
 
 def resolve_security(allowed: bool):
